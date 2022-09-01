@@ -1,0 +1,99 @@
+---
+title: "CDC COVID-19 Report"
+format: html
+code-fold: true
+editor: visual
+execute: 
+  echo: false
+  warning: false 
+params:
+    username: "ovt1"
+    juris: "WA"
+    refreshData: FALSE
+    timeframe: "Daily"
+---
+
+```{r setup}
+library(tidyverse)
+library(flextable)
+devtools::load_all()
+theme_set(theme_classic())
+```
+
+```{r, select-juris}
+state <- tibble(state.name,state.abb) |> 
+    filter(state.abb == params$juris) 
+```
+
+```{r, refresh-data, eval = params$refreshData}
+get_case_death_juris_tbl(username = params$username) |> 
+    mutate(cases_date = lubridate::ymd(cases_date)) |> 
+    write_rds(here::here("data/cases_deaths_tbl.rds"))
+get_hosp_juris_tbl(username = params$username) |> 
+    write_rds(here::here("data/hosp_juris_tbl.rds"))
+get_lab_juris_tbl(username = params$username)|> 
+    write_rds( here::here("data/lab_juris_tbl.rds"))
+```
+
+# `r state$state.name` `r params$timeframe` COVID Report
+
+```{r, load_data}
+case_juris_tbl <- read_rds(here::here("data/cases_deaths_tbl.rds")) |> 
+                            filter(juris == params$juris) |> 
+                            select(!contains("deaths"))
+death_juris_tbl <- read_rds(here::here("data/cases_deaths_tbl.rds")) |> 
+                            filter(juris == params$juris) |> 
+                            select(!contains("cases"))
+hosp_juris_tbl       <- read_rds(here::here("data/hosp_juris_tbl.rds"))|> 
+                            filter(juris == params$juris)
+lab_juris_tbl        <- read_rds(here::here("data/lab_juris_tbl.rds"))|> 
+                            filter(juris == params$juris)
+```
+
+```{r, combine-data}
+
+table_bind <- bind_cols(case_juris_tbl |> 
+                            filter(cases_date ==max(cases_date)),
+                        death_juris_tbl |>  
+                            filter(deaths_date == max(deaths_date)),
+                        hosp_juris_tbl|> filter(hosp_date ==max(hosp_date)), 
+                        lab_juris_tbl|> filter(testpos_date ==max(testpos_date)))
+```
+
+```{r}
+table_bind |>  
+    select(ends_with(c("date","new","cum",'avg',"change"))) |>
+    create_summary_table() |> 
+    select(indicator,
+           cum, 
+           new,
+           avg,
+           change,
+           `7cum`) |> 
+    flextable()
+```
+
+### `r params$timeframe` Change in COVID-19 Cases, `r state$state.name`
+
+```{r}
+plot_epi_curve(case_juris_tbl, params$timeframe, "#440154FF")
+```
+
+### `r params$timeframe` Change in COVID-19 Hospital Admissions, `r state$state.name`
+
+```{r}
+plot_epi_curve(hosp_juris_tbl, params$timeframe, "#f27f27")
+```
+
+### `r params$timeframe` Change in COVID-19 Deaths, `r state$state.name`
+
+```{r}
+plot_epi_curve(death_juris_tbl, params$timeframe, "#31688EFF")
+```
+
+### `r params$timeframe` Change in COVID-19 Testing, `r state$state.name`
+
+```{r}
+
+plot_epi_curve(lab_juris_tbl, params$timeframe, "#e3de42")
+```

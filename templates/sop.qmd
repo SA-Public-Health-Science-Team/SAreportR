@@ -1,0 +1,56 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## 
+
+```{r}
+DiagrammeR("
+  graph LR
+    A[Final Counts]-->D[Clean Raw Data]
+    B[Unified Dataset]-->D
+    C[Hospital State]-->D
+    D-->E[Final Counts Clean]
+    D-->F[Unified Dataset Clean]
+    D-->G[Hospital State Clean]
+    H[Hospital National]-->I[Calculate National Metrics]
+    E-->I
+    F-->I
+    E-->J[Calculate State Metrics]
+    F-->J
+    G-->J
+")
+
+```
+
+Reporting Pipeline
+
+```{r}
+DiagrammeR("
+  graph TB
+    A[Load Raw Data]-->B[Clean, Manipulate, & Analyze Data]
+    B-->C[Tables]
+    B-->D[Plots]
+    B-->E[Metrics & Values]
+    C-->F[Response Update Report RMarkdown Template]
+    C-->G[Director's Brief Bullets RMarkdown Template]
+    C-->H[Director's Executive Summary RMarkdown Template]
+    C-->I[White House Press Briefing RMarkdown Template]
+    D-->F[Response Update Report RMarkdown Template]
+    D-->G[Director's Brief Bullets RMarkdown Template]
+    D-->H[Director's Executive Summary RMarkdown Template]
+    D-->I[White House Press Briefing RMarkdown Template]
+    E-->F[Response Update Report RMarkdown Template]
+    E-->G[Director's Brief Bullets RMarkdown Template]
+    E-->H[Director's Executive Summary RMarkdown Template]
+    E-->I[White House Press Briefing RMarkdown Template]
+    F-->J[PDF - Response Update Report]
+    G-->K[Email - Director's Brief Bullets]
+    H-->L[Docx - Director's Executive Summary]
+    I-->M[PPT - White House Press Briefing]
+  
+")
+
+```

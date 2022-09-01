@@ -1,0 +1,82 @@
+---
+title: "CDC COVID-19 Report"
+format: html
+code-fold: true
+editor: visual
+execute: 
+  echo: false
+  warning: false 
+params:
+    username: "ovt1"
+    refreshData: FALSE
+    timeframe: "Weekly"
+---
+
+```{r setup}
+library(tidyverse)
+library(flextable)
+devtools::load_all()
+theme_set(theme_classic())
+```
+
+```{r load_data}
+cases_nat_tbl  <- get_case_death_nat_tbl(username = params$username) |> 
+    select(!contains("deaths"))
+deaths_nat_tbl <- get_case_death_nat_tbl(username = params$username)|> 
+    select(!contains("cases"))
+hosp_nat_tbl   <- get_hosp_nat_tbl(username = params$username)
+lab_nat_tbl    <- get_lab_nat_tbl(username = params$username)
+```
+
+### National`r params$timeframe` COVID Report
+
+```{r}
+#| echo: false
+cases_nat_row <- cases_nat_tbl |> 
+    filter(cases_date == max(cases_date))
+
+deaths_nat_row <- deaths_nat_tbl |> 
+    filter(deaths_date == max(deaths_date))
+
+lab_nat_row <- lab_nat_tbl |> 
+    filter(testvol_date == max(testvol_date)) |> 
+    select(!contains('new'))
+
+hosp_nat_row <- hosp_nat_tbl |> 
+    filter(hosp_date == max(hosp_date))
+
+```
+
+```{r}
+create_summary_table(cases_nat_row, 
+                     deaths_nat_row,
+                     lab_nat_row, 
+                     hosp_nat_row) |> 
+    flextable()
+
+
+```
+### `r params$timeframe` Change in COVID-19 Cases, United States
+
+```{r}
+plot_epi_curve(cases_nat_tbl, params$timeframe, "#440154FF")
+```
+
+### `r params$timeframe` Change in COVID-19 Hospital Admissions, United States
+
+```{r}
+plot_epi_curve(hosp_nat_tbl, params$timeframe, "#f27f27")
+```
+
+### `r params$timeframe` Change in COVID-19 Deaths, United States
+
+```{r}
+plot_epi_curve(deaths_nat_tbl, params$timeframe, "#31688EFF")
+```
+
+### `r params$timeframe` Change in COVID-19 Testing, United States
+
+```{r}
+
+plot_epi_curve(lab_nat_tbl, params$timeframe, "#e3de42")
+```
