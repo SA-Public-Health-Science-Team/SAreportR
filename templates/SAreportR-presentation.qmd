@@ -1,0 +1,95 @@
+---
+title: "Literate Programming with SAreportR"
+format: revealjs
+editor: visual
+author: Situational Awareness Public Health Science Team
+---
+
+# Introduction
+
+## Literate Programming
+
+> Literate programming is a methodology that combines a programming language with a documentation ("natural") language.
+
+--- Donald E. Knuth
+
+## SAreportR
+
+-   An SA-developed R package with custom functions and report templates
+-   Serves as an app to automatically generate several types of response-related documents in various output formats
+-   Provides a graphical user interface (GUI) for end-users to specify criteria before generating documents
+
+## Technologies
+
+The key tools used to implement this workflow are:
+
+-   R / Python
+-   Quarto / Rmarkdown
+-   R Shiny
+
+Other technologies working under the hood include:
+
+-   C++
+-   JavaScript
+-   HTML/CSS
+-   LaTeX
+
+# Workflow
+
+## Components of SAreportR
+
+-   Templates
+-   Functions
+-   A Dashboard
+-   Documentation
+
+## Templates
+
+::: panel-tabset
+###### Quarto / Rmarkdown
+
+###### Parameterized
+
+``` yaml
+---
+title: "COVID Report"
+format: pdf
+author: Situational Awareness Public Health Science Team
+params:
+    timeframe: "Daily"
+    jurisdiction: "GA"
+    startdate:  "2022-01-01"
+---
+```
+:::
+
+## Functions
+
+-   Main Functions
+-   Utility Functions
+
+## Dashboard
+
+-   R Shiny
+-   Allows users to:
+    -   select which documents to generate
+
+    -   select the parameters of each document
+
+## Documentation
+
+-   Function documentation
+
+-   Document SOPs
+
+# Implications for Current Workflow
+
+## Changes in Workflow
+
+-   Compiling reports -\> SDLC (features, bugs, performance, etc.)
+
+-   Screen shots AND Power BI -\> R (ggplot/highcharteR)
+
+-   Copy & paste AND Excel -\> R (flextable/gt)
+
+-   OneDrive/SharePoint -\> Git (GitHub/GitLab)

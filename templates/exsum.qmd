@@ -1,15 +1,17 @@
 ---
 title: "CDC COVID-19 Report"
-format: html
-code-fold: true
+format: 
+  html:
+    code-fold: true
+    code-tools: true
 editor: visual
 execute: 
-  echo: false
+  echo: true
   warning: false 
 params:
     username: "ovt1"
     refreshData: FALSE
-    timeframe: "Weekly"
+    timeframe: "Daily"
 ---
 
 ```{r setup}
@@ -20,42 +22,25 @@ theme_set(theme_classic())
 ```
 
 ```{r load_data}
-cases_nat_tbl  <- get_case_death_nat_tbl(username = params$username) |> 
-    select(!contains("deaths"))
-deaths_nat_tbl <- get_case_death_nat_tbl(username = params$username)|> 
-    select(!contains("cases"))
+cases_nat_tbl  <- get_case_death_nat_tbl(username = params$username) |> select(!contains("deaths"))
+deaths_nat_tbl <- get_case_death_nat_tbl(username = params$username) |> select(!contains("cases"))
 hosp_nat_tbl   <- get_hosp_nat_tbl(username = params$username)
 lab_nat_tbl    <- get_lab_nat_tbl(username = params$username)
 ```
 
-### National`r params$timeframe` COVID Report
+### `r params$timeframe` COVID Report, United States
 
 ```{r}
 #| echo: false
-cases_nat_row <- cases_nat_tbl |> 
-    filter(cases_date == max(cases_date))
+cases_nat_row  <- cases_nat_tbl  |> filter(cases_date == max(cases_date))
+deaths_nat_row <- deaths_nat_tbl |> filter(deaths_date == max(deaths_date))
+lab_nat_row    <- lab_nat_tbl  |> filter(testvol_date == max(testvol_date)) |> select(!contains('new'))
+hosp_nat_row   <- hosp_nat_tbl |> filter(hosp_date == max(hosp_date))
 
-deaths_nat_row <- deaths_nat_tbl |> 
-    filter(deaths_date == max(deaths_date))
-
-lab_nat_row <- lab_nat_tbl |> 
-    filter(testvol_date == max(testvol_date)) |> 
-    select(!contains('new'))
-
-hosp_nat_row <- hosp_nat_tbl |> 
-    filter(hosp_date == max(hosp_date))
+create_summary_table(cases_nat_row,deaths_nat_row,lab_nat_row,hosp_nat_row) |> flextable()
 
 ```
 
-```{r}
-create_summary_table(cases_nat_row, 
-                     deaths_nat_row,
-                     lab_nat_row, 
-                     hosp_nat_row) |> 
-    flextable()
-
-
-```
 ### `r params$timeframe` Change in COVID-19 Cases, United States
 
 ```{r}
@@ -77,6 +62,5 @@ plot_epi_curve(deaths_nat_tbl, params$timeframe, "#31688EFF")
 ### `r params$timeframe` Change in COVID-19 Testing, United States
 
 ```{r}
-
 plot_epi_curve(lab_nat_tbl, params$timeframe, "#e3de42")
 ```

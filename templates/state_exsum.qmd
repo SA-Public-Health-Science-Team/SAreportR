@@ -8,8 +8,8 @@ execute:
   warning: false 
 params:
     username: "ovt1"
-    juris: "WA"
-    refreshData: FALSE
+    juris: "VA"
+    refreshData: false 
     timeframe: "Daily"
 ---
 
@@ -21,32 +21,28 @@ theme_set(theme_classic())
 ```
 
 ```{r, select-juris}
-state <- tibble(state.name,state.abb) |> 
-    filter(state.abb == params$juris) 
+state <- tibble(state.name,state.abb) |> filter(state.abb == params$juris) 
 ```
 
 ```{r, refresh-data, eval = params$refreshData}
-get_case_death_juris_tbl(username = params$username) |> 
-    mutate(cases_date = lubridate::ymd(cases_date)) |> 
+get_case_death_juris_tbl(username = params$username) |>  mutate(cases_date = lubridate::ymd(cases_date)) |> 
     write_rds(here::here("data/cases_deaths_tbl.rds"))
-get_hosp_juris_tbl(username = params$username) |> 
-    write_rds(here::here("data/hosp_juris_tbl.rds"))
-get_lab_juris_tbl(username = params$username)|> 
-    write_rds( here::here("data/lab_juris_tbl.rds"))
+get_hosp_juris_tbl(username = params$username) |> write_rds(here::here("data/hosp_juris_tbl.rds"))
+get_lab_juris_tbl(username = params$username)|> write_rds( here::here("data/lab_juris_tbl.rds"))
 ```
 
 # `r state$state.name` `r params$timeframe` COVID Report
 
 ```{r, load_data}
-case_juris_tbl <- read_rds(here::here("data/cases_deaths_tbl.rds")) |> 
+case_juris_tbl  <- read_rds(here::here("data/cases_deaths_tbl.rds")) |> 
                             filter(juris == params$juris) |> 
                             select(!contains("deaths"))
 death_juris_tbl <- read_rds(here::here("data/cases_deaths_tbl.rds")) |> 
                             filter(juris == params$juris) |> 
                             select(!contains("cases"))
-hosp_juris_tbl       <- read_rds(here::here("data/hosp_juris_tbl.rds"))|> 
+hosp_juris_tbl  <- read_rds(here::here("data/hosp_juris_tbl.rds"))|>
                             filter(juris == params$juris)
-lab_juris_tbl        <- read_rds(here::here("data/lab_juris_tbl.rds"))|> 
+lab_juris_tbl   <- read_rds(here::here("data/lab_juris_tbl.rds"))|> 
                             filter(juris == params$juris)
 ```
 
@@ -94,6 +90,5 @@ plot_epi_curve(death_juris_tbl, params$timeframe, "#31688EFF")
 ### `r params$timeframe` Change in COVID-19 Testing, `r state$state.name`
 
 ```{r}
-
 plot_epi_curve(lab_juris_tbl, params$timeframe, "#e3de42")
 ```

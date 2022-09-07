@@ -1,123 +1,51 @@
+get_hosp_reg_tbl <- function(username,
+                             date_column = "collection_date",
+                             state_abbr  = 'state',
+                             lag         = 2,
+                             start_date  = "2020-01-01"){
 
-plot_epicurve <- function(data_tbl, timeframe, indicator, color){
-
-
-    date_col <-  case_death_juris_tbl |>
-        select(contains("date")) |>
-        select(1) |>
-        colnames()
-
-    new_col <-  case_death_juris_tbl |>
-        select(contains("new")) |>
-        select(1) |>
-        colnames()
-
-
-    data <-  case_death_juris_tbl |>
-        rename(date  := {{date_col}},
-               new   := {{new_col}}) |>
-        mutate(date       = date  |> lubridate::ymd(),
-               day        = format(date, "%b %d"),
-               week       = lubridate::week(date),
-               month      = lubridate::month(date,
-                                            label = TRUE,
-                                            abbr = TRUE),
-               year       = lubridate::year(date),
-               day_year   = glue::glue('{day}, {year}'),
-               week_year  = glue::glue('{week}-{year}'),
-               month_year = glue::glue('{month}-{year}'))
-
-
-    period <- if_else(timeframe == "Daily",  "day_year",
-              if_else(timeframe == "Weekly", "week_year",
-              if_else(timeframe == "Monthly", "month_year", "date")))
-
-    avg_range <- if_else(timeframe == "Daily",  7,
-                 if_else(timeframe == "Weekly", 14,
-                 if_else(timeframe == "Monthly",0,0)))
-    data |>
-        rename(period := {{period}}) |>
-        select(date, new, period) |> arrange(date) |>
-        mutate( avg_holder  = get_mean(new, days = avg_range)) |>
-        group_by(period) |>
-        summarise(date  = max(date),
-                  new   = sum(new),
-                  avg   = avg_holder [which.max(date)] ,
-                  group = 'group') |> arrange(date) |>
-    ungroup() |>
-    mutate(period = fct_reorder(period,
-                                    date)) |>
-        ggplot(aes(y = new,
-               x = period)) +
-        geom_col(fill="#f27f27")  +
-        geom_line(aes(y = avg, group = group), size=1) +
-
-        scale_y_continuous(labels = scales::label_number(big.mark = ","),
-                           sec.axis =  sec_axis( trans=~./7, name="14-Day Average")) +
-    theme( axis.text.x = element_text(angle = 40,vjust=0.5)) +
-        scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
-}
-
-timeframe <- "Weekly"
-
-data$new |> get_mean()
+    pop <- readr::read_rds(here::here("data/pop.rds")) |>
 
 
 
-chart <- data |>
-    rename(period := {{period}}) |>
-    select(date, new, period) |> arrange(date) |>
-    mutate( avg_holder  = get_mean(new, days = 14),
-            avg_holder_7  = get_mean(new, days = 7)) |>
-    group_by(period) |>
-    summarise(date  = max(date),
-              new   = sum(new),
-              avg   = avg_holder [which.max(date)] ,
-              avg_7   = avg_holder_7 [which.max(date)] ,
-              group = 'group') |> arrange(date) |>
-    ungroup() |>
-    mutate(period = fct_reorder(period,
-                                date)) |>
-    ggplot(aes(y = new,
-               x = period)) +
-    geom_col(fill="blue")  +
-    geom_line(aes(y = avg*7, group = group), size=1, color = "green") +
-    geom_line(aes(y = avg_7*7, group = group), size=1, color = "orange") +
-
-    scale_y_continuous(labels = scales::label_number(big.mark = ","),
-                       sec.axis =  sec_axis( trans=~./7, name="Second Axis")) +
-    theme( axis.text.x = element_text(angle = 40,vjust=0.5)) +
-    scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
-
-chart |>
-    ggplotly()
+        pop %$%
+        dplyr::group_by(fema_region) %$%
+          dplyr::summarise(pop = sum(pop)) %$%
+        View()
 
 
- chart2 <- data |>
-    rename(period := {{period}}) |>
-    select(date, new, period) |> arrange(date) |>
-    mutate( avg_holder  = get_mean(new, days = 14),
-            avg_holder_7  = get_mean(new, days = 7)) |>
-    group_by(period) |>
-    summarise(date  = max(date),
-              new   = sum(new),
-              avg   = avg_holder [which.max(date)] ,
-              avg_7   = avg_holder_7 [which.max(date)] ,
-              group = 'group') |> arrange(date) |>
-    ungroup() |>
-    mutate(period = fct_reorder(period,
-                                date)) |>
-    ggplot(aes(y = new,
-               x = period)) +
-    geom_col(fill="blue")  +
-    geom_line(aes(y = avg, group = group), size=1, color = "green") +
-    geom_line(aes(y = avg_7, group = group), size=1, color = "orange") +
 
-    scale_y_continuous(labels = scales::label_number(big.mark = ","),
-                       sec.axis =  sec_axis( trans=~./2, name="Second Axis")) +
-    theme( axis.text.x = element_text(angle = 40,vjust=0.5)) +
-    scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
-
-
-chart2 |>
-     ggplotly()
+    read_csv(paste0("C:/Users/",
+                    "ovt1",
+                    "/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/HOSPITAL DATA/hospitals_region_daily_incident_management.csv"),
+             guess_max = 3000,
+             show_col_types = FALSE)  |>
+        clean_raw_data(date_column = "collection_date",
+                       lag         = 2,
+                       start_date  = "2020-01-01") |>
+        select(fema_region,
+               date,
+               adm_all_covid_confirmed,
+               avg_adm_all_covid_confirmed
+        ) |>
+        group_by(fema_region) |>
+        mutate(hosp_adm    = adm_all_covid_confirmed,
+               hosp_cum    = cumsum(hosp_adm),
+               hosp_avg    = avg_adm_all_covid_confirmed |> round(),
+               hosp_new    = adm_all_covid_confirmed,
+               pop         = sum(pop)) |>
+        group_by(date,fema_region) |>
+        summarise(
+            hosp_cum = hosp_cum %>% format(justify  = "right",
+                                           big.mark = ","),
+            hosp_new = hosp_new,
+            hosp_avg = hosp_avg
+        ) |>
+        ungroup() |>
+        group_by(fema_region) |>
+        mutate(
+            hosp_change = get_per_change(hosp_avg, date),
+            hosp_7cum   = get_juris_7day_cum_per_100k(hosp_new, pop = pop)
+        ) |>
+        ungroup() |>
+        rename(hosp_date = date)

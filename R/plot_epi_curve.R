@@ -56,17 +56,21 @@ plot_epi_curve <- function(data_tbl, timeframe, color){
         ungroup() |>
         mutate(period = fct_reorder(period,
                                     date))
+
    ylimit <- max(prepped_data$new) * 1.1
 
    prepped_data |>
         ggplot(aes(y = new,
                    x = period)) +
         geom_col(fill=color)  +
-        geom_line(aes(y = avg, group = group), size=1) +
+        geom_line(aes(y = avg,
+                      group = group),
+                  size=1) +
 
          scale_y_continuous(labels = scales::label_number(big.mark = ","),
         #                    sec.axis =  sec_axis( trans=~./7, name="14-Day Average"),
                             limits = c(0, ylimit)) +
-        theme( axis.text.x = element_text(angle = 40,vjust=0.5)) +
+        theme(axis.text.x = element_text(angle = 40,
+                                         vjust=0.5)) +
         scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
 }

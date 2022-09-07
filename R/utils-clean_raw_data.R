@@ -34,6 +34,18 @@ clean_raw_data <- function(data,
 }
 
 
+#' clean_raw_hosp data
+#'
+#' Takes historical data and compresses it into values for the most recent day and calculates aggregate/daily values metrics - totals, means, new
+#' @param data historical data table
+#' @param date_column name of date column to be renamed
+#' @param start_date first day date to filter
+#' @param lag number of days to remove from the most recent date
+#' @return data table with most recent data for each jurisdiction with historical data nested
+#' @import dplyr
+#' @export
+#'
+#' @examples
 clean_raw_hosp_nat_data <- function(data,
                            date_column = Date,
                            lag         = 0,
