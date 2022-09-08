@@ -63,7 +63,7 @@ readr::read_csv(paste0(
         mutate(cases_date  = date,
                deaths_date = date,
                juris = juris |> stringr::str_trim()) |>
-        select(-date)
+        select(-date,-pop)
 }
 
 #' Load, clean, and analyze regional case and death table
@@ -131,7 +131,7 @@ get_case_death_reg_tbl <- function(username,
         #                                              big.mark   = ","))) |>
         mutate(cases_date  = date,
                deaths_date = date) |>
-        select(-date)
+        select(-date,-pop)
 }
 
 

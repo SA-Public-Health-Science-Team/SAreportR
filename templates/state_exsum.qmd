@@ -26,7 +26,7 @@ state <- tibble(state.name,state.abb) |> filter(state.abb == params$juris)
 
 ```{r, refresh-data, eval = params$refreshData}
 get_case_death_juris_tbl(username = params$username) |>  mutate(cases_date = lubridate::ymd(cases_date)) |> 
-    write_rds(here::here("data/cases_deaths_tbl.rds"))
+    write_rds(here::here("data/cases_deaths_juris_tbl.rds"))
 get_hosp_juris_tbl(username = params$username) |> write_rds(here::here("data/hosp_juris_tbl.rds"))
 get_lab_juris_tbl(username = params$username)|> write_rds( here::here("data/lab_juris_tbl.rds"))
 ```

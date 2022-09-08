@@ -1,0 +1,110 @@
+---
+title: "CDC COVID-19 Report"
+format: html
+code-fold: true
+editor: visual
+execute: 
+  echo: false
+  warning: false 
+params:
+    username: "ovt1"
+    region: 6
+    refreshData: false 
+    timeframe: "Weekly"
+---
+
+```{r setup}
+library(tidyverse)
+library(flextable)
+library(maps)
+library(mapdata)
+
+library(usmap)
+devtools::load_all()
+theme_set(theme_classic())
+```
+
+# Region `r params$region` `r params$timeframe` COVID Report
+
+```{r}
+#| column: margin
+
+plot_region_us_map(params$region)
+
+plot_region_map(params$region)
+
+```
+
+```{r, refresh-data, eval = params$refreshData}
+get_case_death_reg_tbl(username = params$username) |> write_rds(here::here("data/case_death_reg_tbl.rds"))
+
+get_hosp_reg_tbl(username = params$username) |> write_rds(here::here("data/hosp_reg_tbl.rds"))
+
+get_lab_reg_tbl(username = params$username)|> write_rds(here::here("data/lab_reg_tbl.rds"))
+```
+
+```{r eval=FALSE}
+
+
+plot_region_map(params$region)
+```
+
+```{r}
+case_reg_tbl  <- read_rds(here::here("data/case_death_reg_tbl.rds")) |> 
+                            strip_region() |> 
+                            filter(fema_region == params$region) |> 
+                            select(!contains("deaths"))
+death_reg_tbl <- read_rds(here::here("data/case_death_reg_tbl.rds"))|> 
+                            strip_region() |> 
+                            filter(fema_region == params$region) |>  
+                            select(!contains("cases"))
+hosp_reg_tbl  <- read_rds(here::here("data/hosp_reg_tbl.rds"))|> 
+                            strip_region() |> 
+                            filter(fema_region == params$region)
+lab_reg_tbl   <- read_rds(here::here("data/lab_reg_tbl.rds"))|> 
+                            strip_region() |> 
+                            filter(fema_region == params$region)
+
+```
+
+```{r}
+
+bind_cols(case_reg_tbl  |> filter(cases_date   == max(cases_date)),
+                        death_reg_tbl |> filter(deaths_date  == max(deaths_date)),
+                        hosp_reg_tbl  |> filter(hosp_date    == max(hosp_date)), 
+                        lab_reg_tbl   |> filter(testpos_date == max(testpos_date))) |>  
+    select(ends_with(c("date","new","cum",'avg',"change"))) |>
+    create_summary_table() |> 
+    select(indicator,
+           cum, 
+           new,
+           avg,
+           change,
+           `7cum`) |> 
+    flextable()
+
+```
+
+### `r params$timeframe` Change in COVID-19 Cases, Region `r params$region`
+
+```{r}
+plot_epi_curve(case_reg_tbl, params$timeframe, "#440154FF")
+```
+
+### `r params$timeframe` Change in COVID-19 Hospital Admissions, Region `r params$region`
+
+```{r}
+plot_epi_curve(hosp_reg_tbl, params$timeframe, "#f27f27")
+```
+
+### `r params$timeframe` Change in COVID-19 Deaths, Region `r params$region`
+
+```{r}
+plot_epi_curve(death_reg_tbl, params$timeframe, "#31688EFF")
+```
+
+### `r params$timeframe` Change in COVID-19 Testing, Region `r params$region`
+
+```{r}
+plot_epi_curve(lab_reg_tbl, params$timeframe, "#e3de42")
+```
