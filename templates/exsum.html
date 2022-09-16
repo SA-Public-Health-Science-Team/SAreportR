@@ -124,17 +124,28 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(flextable)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>()</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_classic</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gt)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gtExtras)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_classic</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cases_nat_tbl  <span class="ot">&lt;-</span> <span class="fu">get_case_death_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username) <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"deaths"</span>))</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>deaths_nat_tbl <span class="ot">&lt;-</span> <span class="fu">get_case_death_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username) <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"cases"</span>))</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>hosp_nat_tbl   <span class="ot">&lt;-</span> <span class="fu">get_hosp_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>lab_nat_tbl    <span class="ot">&lt;-</span> <span class="fu">get_lab_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>case_death_nat_tbl <span class="ot">&lt;-</span> <span class="fu">get_case_death_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>cases_nat_tbl <span class="ot">&lt;-</span> case_death_nat_tbl <span class="sc">|&gt;</span> </span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"deaths"</span>))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>deaths_nat_tbl <span class="ot">&lt;-</span> case_death_nat_tbl <span class="sc">|&gt;</span> </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"cases"</span>))</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>case_death_jur_tbl <span class="ot">&lt;-</span> <span class="fu">get_case_death_juris_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username) <span class="sc">|&gt;</span>  </span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">cases_date =</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(cases_date))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>hosp_nat_tbl       <span class="ot">&lt;-</span> <span class="fu">get_hosp_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>lab_nat_tbl        <span class="ot">&lt;-</span> <span class="fu">get_lab_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <section id="daily-covid-report-united-states" class="level3">
@@ -142,8 +153,1050 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <div class="cell-output-display">
 
-<div class="tabwid"><style>.cl-4e99bb7c{}.cl-4e928820{font-family:'Arial';font-size:11pt;font-weight:normal;font-style:normal;text-decoration:none;color:rgba(0, 0, 0, 1.00);background-color:transparent;}.cl-4e929fa4{margin:0;text-align:left;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);padding-bottom:5pt;padding-top:5pt;padding-left:5pt;padding-right:5pt;line-height: 1;background-color:transparent;}.cl-4e92d17c{width:54pt;background-color:transparent;vertical-align: middle;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-4e92d186{width:54pt;background-color:transparent;vertical-align: middle;border-bottom: 2pt solid rgba(102, 102, 102, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-4e92d187{width:54pt;background-color:transparent;vertical-align: middle;border-bottom: 2pt solid rgba(102, 102, 102, 1.00);border-top: 2pt solid rgba(102, 102, 102, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}</style><table class="cl-4e99bb7c">
-<thead><tr style="overflow-wrap:break-word;"><td class="cl-4e92d187"><p class="cl-4e929fa4"><span class="cl-4e928820">indicator</span></p></td><td class="cl-4e92d187"><p class="cl-4e929fa4"><span class="cl-4e928820">cum</span></p></td><td class="cl-4e92d187"><p class="cl-4e929fa4"><span class="cl-4e928820">new</span></p></td><td class="cl-4e92d187"><p class="cl-4e929fa4"><span class="cl-4e928820">avg</span></p></td><td class="cl-4e92d187"><p class="cl-4e929fa4"><span class="cl-4e928820">7cum</span></p></td><td class="cl-4e92d187"><p class="cl-4e929fa4"><span class="cl-4e928820">change</span></p></td></tr></thead><tbody><tr style="overflow-wrap:break-word;"><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">Cases^[]</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">94796424</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">117195</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">74803</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">  157.7</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">-15.6%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">Hospital Admissions^</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">5,240,034</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">1</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">4255</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820"> 9.0</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">-19.5%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">Deaths*</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">1043171</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">497</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">337</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">0.7</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">-18.8%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">Test Volume†</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">948,934,177</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">N/A</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">  494,470</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820">  825.8</span></p></td><td class="cl-4e92d17c"><p class="cl-4e929fa4"><span class="cl-4e928820"> -3.7%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-4e92d186"><p class="cl-4e929fa4"><span class="cl-4e928820">Test Positivity†</span></p></td><td class="cl-4e92d186"><p class="cl-4e929fa4"><span class="cl-4e928820">9.5%</span></p></td><td class="cl-4e92d186"><p class="cl-4e929fa4"><span class="cl-4e928820">N/A</span></p></td><td class="cl-4e92d186"><p class="cl-4e929fa4"><span class="cl-4e928820">13.5%</span></p></td><td class="cl-4e92d186"><p class="cl-4e929fa4"><span class="cl-4e928820">N/A</span></p></td><td class="cl-4e92d186"><p class="cl-4e929fa4"><span class="cl-4e928820">-5.8%</span></p></td></tr></tbody></table></div>
+<div class="tabwid"><style>.cl-3449c37a{}.cl-3443371c{font-family:'Arial';font-size:11pt;font-weight:normal;font-style:normal;text-decoration:none;color:rgba(0, 0, 0, 1.00);background-color:transparent;}.cl-34434b4e{margin:0;text-align:left;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);padding-bottom:5pt;padding-top:5pt;padding-left:5pt;padding-right:5pt;line-height: 1;background-color:transparent;}.cl-34437452{width:54pt;background-color:transparent;vertical-align: middle;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-3443745c{width:54pt;background-color:transparent;vertical-align: middle;border-bottom: 2pt solid rgba(102, 102, 102, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-34437466{width:54pt;background-color:transparent;vertical-align: middle;border-bottom: 2pt solid rgba(102, 102, 102, 1.00);border-top: 2pt solid rgba(102, 102, 102, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}</style><table class="cl-3449c37a">
+<thead><tr style="overflow-wrap:break-word;"><td class="cl-34437466"><p class="cl-34434b4e"><span class="cl-3443371c">indicator</span></p></td><td class="cl-34437466"><p class="cl-34434b4e"><span class="cl-3443371c">cum</span></p></td><td class="cl-34437466"><p class="cl-34434b4e"><span class="cl-3443371c">new</span></p></td><td class="cl-34437466"><p class="cl-34434b4e"><span class="cl-3443371c">avg</span></p></td><td class="cl-34437466"><p class="cl-34434b4e"><span class="cl-3443371c">7cum</span></p></td><td class="cl-34437466"><p class="cl-34434b4e"><span class="cl-3443371c">change</span></p></td></tr></thead><tbody><tr style="overflow-wrap:break-word;"><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">Cases^[]</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">95412766</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">96354</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">60831</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">  128.3</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">-11.8%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">Hospital Admissions^</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">5,303,209</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">4419</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">4311</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c"> 9.1</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">-6.3%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">Deaths*</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">1047741</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">655</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">392</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">0.8</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">14.6%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">Test Volume†</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">955,994,091</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">N/A</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">  433,137</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">  907.8</span></p></td><td class="cl-34437452"><p class="cl-34434b4e"><span class="cl-3443371c">-13.3%</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-3443745c"><p class="cl-34434b4e"><span class="cl-3443371c">Test Positivity†</span></p></td><td class="cl-3443745c"><p class="cl-34434b4e"><span class="cl-3443371c">9.5%</span></p></td><td class="cl-3443745c"><p class="cl-34434b4e"><span class="cl-3443371c">N/A</span></p></td><td class="cl-3443745c"><p class="cl-34434b4e"><span class="cl-3443371c">11.0%</span></p></td><td class="cl-3443745c"><p class="cl-34434b4e"><span class="cl-3443371c">N/A</span></p></td><td class="cl-3443745c"><p class="cl-34434b4e"><span class="cl-3443371c">-10.9%</span></p></td></tr></tbody></table></div>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>case_death_jur_tbl <span class="sc">|&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">date =</span> cases_date) <span class="sc">|&gt;</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(date <span class="sc">&gt;=</span> <span class="fu">max</span>(date)<span class="sc">-</span><span class="dv">30</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(date) <span class="sc">|&gt;</span> </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(state_name) <span class="sc">|&gt;</span> </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="at">cases_trend =</span>  <span class="fu">list</span>(cases_new),</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_trend =</span>  <span class="fu">list</span>(deaths_new),</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_cum =</span> cases_cum[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_new =</span> cases_new[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_avg =</span> cases_avg[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_avg_per_100k =</span> cases_avg_per_100k[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_cum =</span> deaths_cum[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_new =</span> deaths_new[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_avg =</span> deaths_avg[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_avg_per_100k =</span> deaths_avg_per_100k[<span class="fu">which.max</span>(date)],</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>              <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>              ) <span class="sc">|&gt;</span> </span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">-</span>cases_trend,<span class="sc">-</span>deaths_trend) <span class="sc">|&gt;</span> </span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gt</span>()   <span class="sc">|&gt;</span> </span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fmt_integer</span>(<span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_cum"</span>,</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_new"</span>,</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_avg"</span>,</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_cum"</span>,</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_new"</span>,</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fmt_number</span>(<span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_avg_per_100k"</span>,</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg_per_100k"</span>),</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>               <span class="at">decimals =</span> <span class="dv">1</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># gt_plt_sparkline(deaths_trend, </span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  palette = c("black", </span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "black", </span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "black", </span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "red", </span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "lightgrey"),</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  fig_dim = c(15,25),</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  same_limit = TRUE,</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  label = FALSE) |&gt; </span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>    <span class="co"># gt_plt_dist(cases_trend) |&gt; </span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gt_color_rows</span>(<span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_avg_per_100k"</span>,<span class="st">"deaths_avg_per_100k"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tab_spanner</span>(<span class="st">"Cases"</span>, </span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>                <span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_cum"</span>,</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_new"</span>,</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_avg"</span>,</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_avg_per_100k"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tab_spanner</span>(<span class="st">"Deaths"</span>, </span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>                <span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"deaths_cum"</span>,</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_new"</span>,</span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg"</span>,</span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg_per_100k"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cols_label</span>(<span class="at">state_name=</span> <span class="st">"Jurisdiction"</span>,</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_cum =</span> <span class="st">"Total"</span>,</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_new =</span> <span class="st">"New"</span>,</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_avg =</span> <span class="st">"Avg"</span>,</span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_avg_per_100k =</span> <span class="st">"Avg per 100k"</span>,</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_cum =</span> <span class="st">"Total"</span>,</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_new =</span> <span class="st">"New"</span>,</span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_avg =</span> <span class="st">"Avg"</span>,</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_avg_per_100k =</span> <span class="st">"Avg per 100k"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gt_theme_espn</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+
+<div id="lefpiyvmyz" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>@import url("https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+html {
+  font-family: Lato, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#lefpiyvmyz .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 3px;
+  border-top-color: #FFFFFF;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_heading {
+  background-color: #FFFFFF;
+  text-align: left;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_title {
+  color: #333333;
+  font-size: 24px;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#lefpiyvmyz .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#lefpiyvmyz .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 80%;
+  font-weight: bolder;
+  text-transform: uppercase;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#lefpiyvmyz .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 80%;
+  font-weight: bolder;
+  text-transform: uppercase;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#lefpiyvmyz .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#lefpiyvmyz .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#lefpiyvmyz .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#lefpiyvmyz .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 80%;
+  font-weight: bolder;
+  text-transform: uppercase;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#lefpiyvmyz .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 80%;
+  font-weight: bolder;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#lefpiyvmyz .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#lefpiyvmyz .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#lefpiyvmyz .gt_row {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #F6F7F7;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#lefpiyvmyz .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 80%;
+  font-weight: bolder;
+  text-transform: uppercase;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#lefpiyvmyz .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#lefpiyvmyz .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#lefpiyvmyz .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#lefpiyvmyz .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#lefpiyvmyz .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#lefpiyvmyz .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_striped {
+  background-color: #FAFAFA;
+}
+
+#lefpiyvmyz .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-left: 4px;
+  padding-right: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#lefpiyvmyz .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#lefpiyvmyz .gt_sourcenote {
+  font-size: 12px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#lefpiyvmyz .gt_left {
+  text-align: left;
+}
+
+#lefpiyvmyz .gt_center {
+  text-align: center;
+}
+
+#lefpiyvmyz .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#lefpiyvmyz .gt_font_normal {
+  font-weight: normal;
+}
+
+#lefpiyvmyz .gt_font_bold {
+  font-weight: bold;
+}
+
+#lefpiyvmyz .gt_font_italic {
+  font-style: italic;
+}
+
+#lefpiyvmyz .gt_super {
+  font-size: 65%;
+}
+
+#lefpiyvmyz .gt_footnote_marks {
+  font-style: italic;
+  font-weight: normal;
+  font-size: 75%;
+  vertical-align: 0.4em;
+}
+
+#lefpiyvmyz .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#lefpiyvmyz .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#lefpiyvmyz .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#lefpiyvmyz .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#lefpiyvmyz .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#lefpiyvmyz .gt_indent_5 {
+  text-indent: 25px;
+}
+</style>
+<table class="gt_table">
+  
+  <thead class="gt_col_headings">
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col">Jurisdiction</th>
+      <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="4" scope="colgroup">
+        <span class="gt_column_spanner">Cases</span>
+      </th>
+      <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="4" scope="colgroup">
+        <span class="gt_column_spanner">Deaths</span>
+      </th>
+    </tr>
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Total</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">New</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Avg</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Avg per 100k</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Total</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">New</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Avg</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Avg per 100k</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td class="gt_row gt_left">Alabama</td>
+<td class="gt_row gt_right">1,513,159</td>
+<td class="gt_row gt_right">1,025</td>
+<td class="gt_row gt_right">1,026</td>
+<td class="gt_row gt_right" style="background-color: #EE9695; color: #000000;">20.9</td>
+<td class="gt_row gt_right">20,325</td>
+<td class="gt_row gt_right">3</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right" style="background-color: #FFE1E5; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Alaska</td>
+<td class="gt_row gt_right gt_striped">281,727</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">137</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F19FA0; color: #000000;">18.7</td>
+<td class="gt_row gt_right gt_striped">1,329</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">4</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #B71C1C; color: #FFFFFF;">0.5</td></tr>
+    <tr><td class="gt_row gt_left">American Samoa</td>
+<td class="gt_row gt_right">8,217</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right" style="background-color: #FFEBEE; color: #000000;">0.0</td>
+<td class="gt_row gt_right">34</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Arizona</td>
+<td class="gt_row gt_right gt_striped">2,264,159</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">874</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FCC2C6; color: #000000;">12.0</td>
+<td class="gt_row gt_right gt_striped">31,244</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">12</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #E87E7E; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left">Arkansas</td>
+<td class="gt_row gt_right">944,789</td>
+<td class="gt_row gt_right">845</td>
+<td class="gt_row gt_right">750</td>
+<td class="gt_row gt_right" style="background-color: #EA8686; color: #000000;">24.9</td>
+<td class="gt_row gt_right">11,977</td>
+<td class="gt_row gt_right">7</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right" style="background-color: #ED9393; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">California</td>
+<td class="gt_row gt_right gt_striped">11,180,793</td>
+<td class="gt_row gt_right gt_striped">24,904</td>
+<td class="gt_row gt_right gt_striped">6,202</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F6AFB1; color: #000000;">15.7</td>
+<td class="gt_row gt_right gt_striped">94,747</td>
+<td class="gt_row gt_right gt_striped">189</td>
+<td class="gt_row gt_right gt_striped">57</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EC8C8B; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">Colorado</td>
+<td class="gt_row gt_right">1,644,829</td>
+<td class="gt_row gt_right">782</td>
+<td class="gt_row gt_right">660</td>
+<td class="gt_row gt_right" style="background-color: #FDC5C9; color: #000000;">11.5</td>
+<td class="gt_row gt_right">13,236</td>
+<td class="gt_row gt_right">6</td>
+<td class="gt_row gt_right">6</td>
+<td class="gt_row gt_right" style="background-color: #F4A9AA; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Connecticut</td>
+<td class="gt_row gt_right gt_striped">886,348</td>
+<td class="gt_row gt_right gt_striped">581</td>
+<td class="gt_row gt_right gt_striped">914</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #E98383; color: #000000;">25.6</td>
+<td class="gt_row gt_right gt_striped">11,329</td>
+<td class="gt_row gt_right gt_striped">12</td>
+<td class="gt_row gt_right gt_striped">5</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EC8E8E; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">Delaware</td>
+<td class="gt_row gt_right">305,517</td>
+<td class="gt_row gt_right">233</td>
+<td class="gt_row gt_right">192</td>
+<td class="gt_row gt_right" style="background-color: #EF9A9A; color: #000000;">19.7</td>
+<td class="gt_row gt_right">3,080</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right" style="background-color: #F5AAAB; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">District of Columbia</td>
+<td class="gt_row gt_right gt_striped">167,420</td>
+<td class="gt_row gt_right gt_striped">78</td>
+<td class="gt_row gt_right gt_striped">75</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FEC9CE; color: #000000;">10.6</td>
+<td class="gt_row gt_right gt_striped">1,382</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left">Federated States of Micronesia</td>
+<td class="gt_row gt_right">10,010</td>
+<td class="gt_row gt_right">77</td>
+<td class="gt_row gt_right">91</td>
+<td class="gt_row gt_right" style="background-color: #B71C1C; color: #FFFFFF;">88.9</td>
+<td class="gt_row gt_right">30</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Florida</td>
+<td class="gt_row gt_right gt_striped">7,089,180</td>
+<td class="gt_row gt_right gt_striped">3,072</td>
+<td class="gt_row gt_right gt_striped">3,267</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F7B1B3; color: #000000;">15.2</td>
+<td class="gt_row gt_right gt_striped">80,782</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">8</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFD9DD; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left">Georgia</td>
+<td class="gt_row gt_right">2,893,001</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">1,383</td>
+<td class="gt_row gt_right" style="background-color: #FBBDC0; color: #000000;">13.0</td>
+<td class="gt_row gt_right">40,025</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">21</td>
+<td class="gt_row gt_right" style="background-color: #E86C6A; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Guam</td>
+<td class="gt_row gt_right gt_striped">58,370</td>
+<td class="gt_row gt_right gt_striped">18</td>
+<td class="gt_row gt_right gt_striped">21</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FBC0C3; color: #000000;">12.5</td>
+<td class="gt_row gt_right gt_striped">394</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left">Hawaii</td>
+<td class="gt_row gt_right">333,547</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">181</td>
+<td class="gt_row gt_right" style="background-color: #FBBEC1; color: #000000;">12.8</td>
+<td class="gt_row gt_right">1,653</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right" style="background-color: #FDC5C9; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Idaho</td>
+<td class="gt_row gt_right gt_striped">492,580</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">233</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FABDC0; color: #000000;">13.0</td>
+<td class="gt_row gt_right gt_striped">5,142</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">2</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F2A2A3; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">Illinois</td>
+<td class="gt_row gt_right">3,731,410</td>
+<td class="gt_row gt_right">3,111</td>
+<td class="gt_row gt_right">2,629</td>
+<td class="gt_row gt_right" style="background-color: #EE9696; color: #000000;">20.7</td>
+<td class="gt_row gt_right">39,524</td>
+<td class="gt_row gt_right">26</td>
+<td class="gt_row gt_right">14</td>
+<td class="gt_row gt_right" style="background-color: #F2A3A4; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Indiana</td>
+<td class="gt_row gt_right gt_striped">1,912,563</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">1,048</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F6B0B1; color: #000000;">15.6</td>
+<td class="gt_row gt_right gt_striped">24,581</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">11</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #E87F7F; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left">Iowa</td>
+<td class="gt_row gt_right">851,233</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">571</td>
+<td class="gt_row gt_right" style="background-color: #F2A3A3; color: #000000;">18.1</td>
+<td class="gt_row gt_right">9,994</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right" style="background-color: #EE9797; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Kansas</td>
+<td class="gt_row gt_right gt_striped">873,075</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">595</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EE9797; color: #000000;">20.4</td>
+<td class="gt_row gt_right gt_striped">9,072</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">1</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFDADE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left">Kentucky</td>
+<td class="gt_row gt_right">1,564,091</td>
+<td class="gt_row gt_right">2,318</td>
+<td class="gt_row gt_right">1,235</td>
+<td class="gt_row gt_right" style="background-color: #E77B7B; color: #000000;">27.6</td>
+<td class="gt_row gt_right">16,886</td>
+<td class="gt_row gt_right">12</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right" style="background-color: #F8B5B7; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Louisiana</td>
+<td class="gt_row gt_right gt_striped">1,447,814</td>
+<td class="gt_row gt_right gt_striped">1,076</td>
+<td class="gt_row gt_right gt_striped">885</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F09E9E; color: #000000;">19.0</td>
+<td class="gt_row gt_right gt_striped">17,968</td>
+<td class="gt_row gt_right gt_striped">13</td>
+<td class="gt_row gt_right gt_striped">7</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EB8887; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left">Maine</td>
+<td class="gt_row gt_right">286,379</td>
+<td class="gt_row gt_right">328</td>
+<td class="gt_row gt_right">246</td>
+<td class="gt_row gt_right" style="background-color: #F2A2A2; color: #000000;">18.3</td>
+<td class="gt_row gt_right">2,564</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right" style="background-color: #F44539; color: #FFFFFF;">0.3</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Maryland</td>
+<td class="gt_row gt_right gt_striped">1,238,735</td>
+<td class="gt_row gt_right gt_striped">1,206</td>
+<td class="gt_row gt_right gt_striped">987</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F5ACAD; color: #000000;">16.3</td>
+<td class="gt_row gt_right gt_striped">15,301</td>
+<td class="gt_row gt_right gt_striped">7</td>
+<td class="gt_row gt_right gt_striped">8</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #ED9393; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">Massachusetts</td>
+<td class="gt_row gt_right">2,030,335</td>
+<td class="gt_row gt_right">9,004</td>
+<td class="gt_row gt_right">1,286</td>
+<td class="gt_row gt_right" style="background-color: #F1A0A0; color: #000000;">18.7</td>
+<td class="gt_row gt_right">21,588</td>
+<td class="gt_row gt_right">52</td>
+<td class="gt_row gt_right">7</td>
+<td class="gt_row gt_right" style="background-color: #F5ABAC; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Michigan</td>
+<td class="gt_row gt_right gt_striped">2,804,588</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">2,625</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #E98080; color: #000000;">26.3</td>
+<td class="gt_row gt_right gt_striped">38,317</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">28</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F24A40; color: #FFFFFF;">0.3</td></tr>
+    <tr><td class="gt_row gt_left">Minnesota</td>
+<td class="gt_row gt_right">1,651,999</td>
+<td class="gt_row gt_right">6,346</td>
+<td class="gt_row gt_right">907</td>
+<td class="gt_row gt_right" style="background-color: #F6ADAF; color: #000000;">16.1</td>
+<td class="gt_row gt_right">13,558</td>
+<td class="gt_row gt_right">49</td>
+<td class="gt_row gt_right">7</td>
+<td class="gt_row gt_right" style="background-color: #EF9898; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Mississippi</td>
+<td class="gt_row gt_right gt_striped">922,493</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">517</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F3A6A7; color: #000000;">17.4</td>
+<td class="gt_row gt_right gt_striped">12,853</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">5</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #E87C7C; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left">Missouri</td>
+<td class="gt_row gt_right">1,628,318</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">1,332</td>
+<td class="gt_row gt_right" style="background-color: #ED9292; color: #000000;">21.7</td>
+<td class="gt_row gt_right">21,375</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">6</td>
+<td class="gt_row gt_right" style="background-color: #F6AEB0; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Montana</td>
+<td class="gt_row gt_right gt_striped">306,709</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">164</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F7B1B3; color: #000000;">15.3</td>
+<td class="gt_row gt_right gt_striped">3,509</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">1</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F7B1B3; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">Nebraska</td>
+<td class="gt_row gt_right">534,818</td>
+<td class="gt_row gt_right">206</td>
+<td class="gt_row gt_right">253</td>
+<td class="gt_row gt_right" style="background-color: #FABCC0; color: #000000;">13.1</td>
+<td class="gt_row gt_right">4,490</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Nevada</td>
+<td class="gt_row gt_right gt_striped">845,491</td>
+<td class="gt_row gt_right gt_striped">1,197</td>
+<td class="gt_row gt_right gt_striped">254</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFD2D7; color: #000000;">8.2</td>
+<td class="gt_row gt_right gt_striped">11,438</td>
+<td class="gt_row gt_right gt_striped">11</td>
+<td class="gt_row gt_right gt_striped">2</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FEC9CE; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">New Hampshire</td>
+<td class="gt_row gt_right">347,209</td>
+<td class="gt_row gt_right">582</td>
+<td class="gt_row gt_right">205</td>
+<td class="gt_row gt_right" style="background-color: #F7B2B4; color: #000000;">15.1</td>
+<td class="gt_row gt_right">2,682</td>
+<td class="gt_row gt_right">6</td>
+<td class="gt_row gt_right">2</td>
+<td class="gt_row gt_right" style="background-color: #EB8A89; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">New Jersey</td>
+<td class="gt_row gt_right gt_striped">2,706,107</td>
+<td class="gt_row gt_right gt_striped">2,767</td>
+<td class="gt_row gt_right gt_striped">2,079</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EC8C8B; color: #000000;">23.4</td>
+<td class="gt_row gt_right gt_striped">34,658</td>
+<td class="gt_row gt_right gt_striped">8</td>
+<td class="gt_row gt_right gt_striped">7</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FBBEC1; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">New Mexico</td>
+<td class="gt_row gt_right">615,405</td>
+<td class="gt_row gt_right">243</td>
+<td class="gt_row gt_right">260</td>
+<td class="gt_row gt_right" style="background-color: #FBC0C3; color: #000000;">12.4</td>
+<td class="gt_row gt_right">8,509</td>
+<td class="gt_row gt_right">12</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right" style="background-color: #E76F6E; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">New York</td>
+<td class="gt_row gt_right gt_striped">3,191,908</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">1,889</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F4A8A9; color: #000000;">17.1</td>
+<td class="gt_row gt_right gt_striped">28,970</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">9</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FABCBF; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">New York City</td>
+<td class="gt_row gt_right">2,845,390</td>
+<td class="gt_row gt_right">1,911</td>
+<td class="gt_row gt_right">1,925</td>
+<td class="gt_row gt_right" style="background-color: #EC8E8D; color: #000000;">22.9</td>
+<td class="gt_row gt_right">41,791</td>
+<td class="gt_row gt_right">19</td>
+<td class="gt_row gt_right">14</td>
+<td class="gt_row gt_right" style="background-color: #E87D7D; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">North Carolina</td>
+<td class="gt_row gt_right gt_striped">3,165,186</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">2,031</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F09C9C; color: #000000;">19.4</td>
+<td class="gt_row gt_right gt_striped">26,417</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">2</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFE2E5; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left">North Dakota</td>
+<td class="gt_row gt_right">267,287</td>
+<td class="gt_row gt_right">1,014</td>
+<td class="gt_row gt_right">282</td>
+<td class="gt_row gt_right" style="background-color: #ED5C59; color: #000000;">37.0</td>
+<td class="gt_row gt_right">2,364</td>
+<td class="gt_row gt_right">10</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right" style="background-color: #EE9494; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Northern Marianas Islands</td>
+<td class="gt_row gt_right gt_striped">13,155</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">1</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFE5E8; color: #000000;">1.9</td>
+<td class="gt_row gt_right gt_striped">40</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left">Ohio</td>
+<td class="gt_row gt_right">3,117,109</td>
+<td class="gt_row gt_right">20,552</td>
+<td class="gt_row gt_right">2,936</td>
+<td class="gt_row gt_right" style="background-color: #EA8585; color: #000000;">25.1</td>
+<td class="gt_row gt_right">39,675</td>
+<td class="gt_row gt_right">99</td>
+<td class="gt_row gt_right">14</td>
+<td class="gt_row gt_right" style="background-color: #F09B9C; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Oklahoma</td>
+<td class="gt_row gt_right gt_striped">1,189,193</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">1,017</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #E98382; color: #000000;">25.7</td>
+<td class="gt_row gt_right gt_striped">14,784</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">3</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FCC0C4; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">Oregon</td>
+<td class="gt_row gt_right">885,963</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">472</td>
+<td class="gt_row gt_right" style="background-color: #FDC6CA; color: #000000;">11.2</td>
+<td class="gt_row gt_right">8,492</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">5</td>
+<td class="gt_row gt_right" style="background-color: #F09C9D; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Palau</td>
+<td class="gt_row gt_right gt_striped">5,430</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">4</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F1A0A1; color: #000000;">18.6</td>
+<td class="gt_row gt_right gt_striped">6</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left">Pennsylvania</td>
+<td class="gt_row gt_right">3,220,317</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">2,501</td>
+<td class="gt_row gt_right" style="background-color: #EF9B9B; color: #000000;">19.5</td>
+<td class="gt_row gt_right">46,970</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">20</td>
+<td class="gt_row gt_right" style="background-color: #EA8483; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Puerto Rico</td>
+<td class="gt_row gt_right gt_striped">945,833</td>
+<td class="gt_row gt_right gt_striped">1,861</td>
+<td class="gt_row gt_right gt_striped">1,391</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F14D46; color: #FFFFFF;">43.6</td>
+<td class="gt_row gt_right gt_striped">5,063</td>
+<td class="gt_row gt_right gt_striped">10</td>
+<td class="gt_row gt_right gt_striped">7</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EC615E; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left">Republic of Marshall Islands</td>
+<td class="gt_row gt_right">15,213</td>
+<td class="gt_row gt_right">33</td>
+<td class="gt_row gt_right">20</td>
+<td class="gt_row gt_right" style="background-color: #E98382; color: #000000;">25.7</td>
+<td class="gt_row gt_right">17</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Rhode Island</td>
+<td class="gt_row gt_right gt_striped">401,224</td>
+<td class="gt_row gt_right gt_striped">1,482</td>
+<td class="gt_row gt_right gt_striped">212</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EF9999; color: #000000;">20.0</td>
+<td class="gt_row gt_right gt_striped">3,661</td>
+<td class="gt_row gt_right gt_striped">9</td>
+<td class="gt_row gt_right gt_striped">1</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F7B1B3; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">South Carolina</td>
+<td class="gt_row gt_right">1,696,746</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">761</td>
+<td class="gt_row gt_right" style="background-color: #F8B4B6; color: #000000;">14.8</td>
+<td class="gt_row gt_right">18,316</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">South Dakota</td>
+<td class="gt_row gt_right gt_striped">259,683</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">168</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F09E9E; color: #000000;">19.0</td>
+<td class="gt_row gt_right gt_striped">3,014</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">2</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #ED5D5A; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left">Tennessee</td>
+<td class="gt_row gt_right">2,324,658</td>
+<td class="gt_row gt_right">1,584</td>
+<td class="gt_row gt_right">1,454</td>
+<td class="gt_row gt_right" style="background-color: #EE9494; color: #000000;">21.3</td>
+<td class="gt_row gt_right">27,585</td>
+<td class="gt_row gt_right">32</td>
+<td class="gt_row gt_right">8</td>
+<td class="gt_row gt_right" style="background-color: #F09E9E; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Texas</td>
+<td class="gt_row gt_right gt_striped">7,816,911</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">4,493</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F7B0B2; color: #000000;">15.5</td>
+<td class="gt_row gt_right gt_striped">88,898</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">18</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFCCD1; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">U.S. Virgin Islands</td>
+<td class="gt_row gt_right">23,031</td>
+<td class="gt_row gt_right">13</td>
+<td class="gt_row gt_right">17</td>
+<td class="gt_row gt_right" style="background-color: #F6ADAF; color: #000000;">16.0</td>
+<td class="gt_row gt_right">123</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right" style="background-color: #FFEBEE; color: #000000;">0.0</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Utah</td>
+<td class="gt_row gt_right gt_striped">1,034,616</td>
+<td class="gt_row gt_right gt_striped">2,487</td>
+<td class="gt_row gt_right gt_striped">355</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FDC7CB; color: #000000;">11.1</td>
+<td class="gt_row gt_right gt_striped">5,001</td>
+<td class="gt_row gt_right gt_striped">12</td>
+<td class="gt_row gt_right gt_striped">2</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FFCCD0; color: #000000;">0.1</td></tr>
+    <tr><td class="gt_row gt_left">Vermont</td>
+<td class="gt_row gt_right">131,183</td>
+<td class="gt_row gt_right">92</td>
+<td class="gt_row gt_right">84</td>
+<td class="gt_row gt_right" style="background-color: #FABABD; color: #000000;">13.5</td>
+<td class="gt_row gt_right">685</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right" style="background-color: #E98181; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Virginia</td>
+<td class="gt_row gt_right gt_striped">2,070,182</td>
+<td class="gt_row gt_right gt_striped">1,831</td>
+<td class="gt_row gt_right gt_striped">1,657</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #F09C9C; color: #000000;">19.4</td>
+<td class="gt_row gt_right gt_striped">21,679</td>
+<td class="gt_row gt_right gt_striped">16</td>
+<td class="gt_row gt_right gt_striped">13</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EA8686; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left">Washington</td>
+<td class="gt_row gt_right">1,799,476</td>
+<td class="gt_row gt_right">1,322</td>
+<td class="gt_row gt_right">1,031</td>
+<td class="gt_row gt_right" style="background-color: #FABABD; color: #000000;">13.5</td>
+<td class="gt_row gt_right">14,184</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">12</td>
+<td class="gt_row gt_right" style="background-color: #E98383; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">West Virginia</td>
+<td class="gt_row gt_right gt_striped">594,355</td>
+<td class="gt_row gt_right gt_striped">549</td>
+<td class="gt_row gt_right gt_striped">716</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #EF524F; color: #000000;">40.0</td>
+<td class="gt_row gt_right gt_striped">7,357</td>
+<td class="gt_row gt_right gt_striped">6</td>
+<td class="gt_row gt_right gt_striped">8</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #CE2D2D; color: #FFFFFF;">0.4</td></tr>
+    <tr><td class="gt_row gt_left">Wisconsin</td>
+<td class="gt_row gt_right">1,850,553</td>
+<td class="gt_row gt_right">1,624</td>
+<td class="gt_row gt_right">1,263</td>
+<td class="gt_row gt_right" style="background-color: #ED9392; color: #000000;">21.7</td>
+<td class="gt_row gt_right">15,185</td>
+<td class="gt_row gt_right">25</td>
+<td class="gt_row gt_right">10</td>
+<td class="gt_row gt_right" style="background-color: #E77A7A; color: #000000;">0.2</td></tr>
+    <tr><td class="gt_row gt_left gt_striped">Wyoming</td>
+<td class="gt_row gt_right gt_striped">175,746</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">65</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #FDC6CA; color: #000000;">11.2</td>
+<td class="gt_row gt_right gt_striped">1,888</td>
+<td class="gt_row gt_right gt_striped">0</td>
+<td class="gt_row gt_right gt_striped">1</td>
+<td class="gt_row gt_right gt_striped" style="background-color: #E77979; color: #000000;">0.2</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
 </div>
 </div>
 </section>
@@ -152,10 +1205,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(cases_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#440154FF"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(cases_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#440154FF"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="exsum_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+<p><img src="exsum_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -164,10 +1217,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(hosp_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#f27f27"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(hosp_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#f27f27"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="exsum_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+<p><img src="exsum_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -176,10 +1229,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(deaths_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#31688EFF"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(deaths_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#31688EFF"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="exsum_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+<p><img src="exsum_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -188,10 +1241,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(lab_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#e3de42"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(lab_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#e3de42"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="exsum_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+<p><img src="exsum_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <!-- -->
@@ -330,72 +1383,158 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
 });
 </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb7" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "CDC COVID-19 Report"</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span><span class="co"> </span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="an">editor:</span><span class="co"> visual</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">  echo: true</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false </span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="an">params:</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co">    username: "ovt1"</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co">    refreshData: FALSE</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co">    timeframe: "Daily"</span></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="in">```{r setup}</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(flextable)</span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>()</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_classic</span>())</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="in">```{r load_data}</span></span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>cases_nat_tbl  <span class="ot">&lt;-</span> <span class="fu">get_case_death_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username) <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"deaths"</span>))</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>deaths_nat_tbl <span class="ot">&lt;-</span> <span class="fu">get_case_death_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username) <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"cases"</span>))</span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>hosp_nat_tbl   <span class="ot">&lt;-</span> <span class="fu">get_hosp_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>lab_nat_tbl    <span class="ot">&lt;-</span> <span class="fu">get_lab_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
-<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` COVID Report, United States</span></span>
-<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
-<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>cases_nat_row  <span class="ot">&lt;-</span> cases_nat_tbl  <span class="sc">|&gt;</span> <span class="fu">filter</span>(cases_date <span class="sc">==</span> <span class="fu">max</span>(cases_date))</span>
-<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>deaths_nat_row <span class="ot">&lt;-</span> deaths_nat_tbl <span class="sc">|&gt;</span> <span class="fu">filter</span>(deaths_date <span class="sc">==</span> <span class="fu">max</span>(deaths_date))</span>
-<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>lab_nat_row    <span class="ot">&lt;-</span> lab_nat_tbl  <span class="sc">|&gt;</span> <span class="fu">filter</span>(testvol_date <span class="sc">==</span> <span class="fu">max</span>(testvol_date)) <span class="sc">|&gt;</span> <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">'new'</span>))</span>
-<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>hosp_nat_row   <span class="ot">&lt;-</span> hosp_nat_tbl <span class="sc">|&gt;</span> <span class="fu">filter</span>(hosp_date <span class="sc">==</span> <span class="fu">max</span>(hosp_date))</span>
-<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a><span class="fu">create_summary_table</span>(cases_nat_row,deaths_nat_row,lab_nat_row,hosp_nat_row) <span class="sc">|&gt;</span> <span class="fu">flextable</span>()</span>
-<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Cases, United States</span></span>
-<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(cases_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#440154FF"</span>)</span>
-<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Hospital Admissions, United States</span></span>
-<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(hosp_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#f27f27"</span>)</span>
-<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Deaths, United States</span></span>
-<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(deaths_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#31688EFF"</span>)</span>
-<span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Testing, United States</span></span>
-<span id="cb7-71"><a href="#cb7-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-74"><a href="#cb7-74" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-75"><a href="#cb7-75" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(lab_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#e3de42"</span>)</span>
-<span id="cb7-76"><a href="#cb7-76" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<div class="sourceCode" id="cb8" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "CDC COVID-19 Report"</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span><span class="co"> </span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="an">editor:</span><span class="co"> visual</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">  echo: true</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false </span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="an">params:</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co">    username: "ovt1"</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co">    refreshData: FALSE</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co">    timeframe: "Daily"</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="in">```{r setup}</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(flextable)</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gt)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gtExtras)</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>()</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_classic</span>())</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="in">```{r load_data}</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>case_death_nat_tbl <span class="ot">&lt;-</span> <span class="fu">get_case_death_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>cases_nat_tbl <span class="ot">&lt;-</span> case_death_nat_tbl <span class="sc">|&gt;</span> </span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"deaths"</span>))</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>deaths_nat_tbl <span class="ot">&lt;-</span> case_death_nat_tbl <span class="sc">|&gt;</span> </span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"cases"</span>))</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>case_death_jur_tbl <span class="ot">&lt;-</span> <span class="fu">get_case_death_juris_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username) <span class="sc">|&gt;</span>  </span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">cases_date =</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(cases_date))</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>hosp_nat_tbl       <span class="ot">&lt;-</span> <span class="fu">get_hosp_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>lab_nat_tbl        <span class="ot">&lt;-</span> <span class="fu">get_lab_nat_tbl</span>(<span class="at">username =</span> params<span class="sc">$</span>username)</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` COVID Report, United States</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>cases_nat_row  <span class="ot">&lt;-</span> case_death_nat_tbl <span class="sc">|&gt;</span> </span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"deaths"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(cases_date <span class="sc">==</span> <span class="fu">max</span>(cases_date))</span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>deaths_nat_row <span class="ot">&lt;-</span> case_death_nat_tbl <span class="sc">|&gt;</span> </span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">"cases"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>     <span class="fu">filter</span>(deaths_date <span class="sc">==</span> <span class="fu">max</span>(deaths_date))</span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>lab_nat_row    <span class="ot">&lt;-</span> lab_nat_tbl  <span class="sc">|&gt;</span> </span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(testvol_date <span class="sc">==</span> <span class="fu">max</span>(testvol_date)) <span class="sc">|&gt;</span> </span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">!</span><span class="fu">contains</span>(<span class="st">'new'</span>))</span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>hosp_nat_row   <span class="ot">&lt;-</span> hosp_nat_tbl <span class="sc">|&gt;</span> </span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(hosp_date <span class="sc">==</span> <span class="fu">max</span>(hosp_date))</span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="fu">create_summary_table</span>(cases_nat_row,deaths_nat_row,lab_nat_row,hosp_nat_row) <span class="sc">|&gt;</span> <span class="fu">flextable</span>()</span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a>case_death_jur_tbl <span class="sc">|&gt;</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">date =</span> cases_date) <span class="sc">|&gt;</span> </span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(date <span class="sc">&gt;=</span> <span class="fu">max</span>(date)<span class="sc">-</span><span class="dv">30</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(date) <span class="sc">|&gt;</span> </span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(state_name) <span class="sc">|&gt;</span> </span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="at">cases_trend =</span>  <span class="fu">list</span>(cases_new),</span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_trend =</span>  <span class="fu">list</span>(deaths_new),</span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_cum =</span> cases_cum[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_new =</span> cases_new[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_avg =</span> cases_avg[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a>              <span class="at">cases_avg_per_100k =</span> cases_avg_per_100k[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_cum =</span> deaths_cum[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_new =</span> deaths_new[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_avg =</span> deaths_avg[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a>              <span class="at">deaths_avg_per_100k =</span> deaths_avg_per_100k[<span class="fu">which.max</span>(date)],</span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a>              <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a>              ) <span class="sc">|&gt;</span> </span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">-</span>cases_trend,<span class="sc">-</span>deaths_trend) <span class="sc">|&gt;</span> </span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gt</span>()   <span class="sc">|&gt;</span> </span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fmt_integer</span>(<span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_cum"</span>,</span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_new"</span>,</span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_avg"</span>,</span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_cum"</span>,</span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_new"</span>,</span>
+<span id="cb8-97"><a href="#cb8-97" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb8-98"><a href="#cb8-98" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fmt_number</span>(<span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_avg_per_100k"</span>,</span>
+<span id="cb8-99"><a href="#cb8-99" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg_per_100k"</span>),</span>
+<span id="cb8-100"><a href="#cb8-100" aria-hidden="true" tabindex="-1"></a>               <span class="at">decimals =</span> <span class="dv">1</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb8-101"><a href="#cb8-101" aria-hidden="true" tabindex="-1"></a>    <span class="co"># gt_plt_sparkline(deaths_trend, </span></span>
+<span id="cb8-102"><a href="#cb8-102" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  palette = c("black", </span></span>
+<span id="cb8-103"><a href="#cb8-103" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "black", </span></span>
+<span id="cb8-104"><a href="#cb8-104" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "black", </span></span>
+<span id="cb8-105"><a href="#cb8-105" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "red", </span></span>
+<span id="cb8-106"><a href="#cb8-106" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                              "lightgrey"),</span></span>
+<span id="cb8-107"><a href="#cb8-107" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  fig_dim = c(15,25),</span></span>
+<span id="cb8-108"><a href="#cb8-108" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  same_limit = TRUE,</span></span>
+<span id="cb8-109"><a href="#cb8-109" aria-hidden="true" tabindex="-1"></a>    <span class="co">#                  label = FALSE) |&gt; </span></span>
+<span id="cb8-110"><a href="#cb8-110" aria-hidden="true" tabindex="-1"></a>    <span class="co"># gt_plt_dist(cases_trend) |&gt; </span></span>
+<span id="cb8-111"><a href="#cb8-111" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gt_color_rows</span>(<span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_avg_per_100k"</span>,<span class="st">"deaths_avg_per_100k"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb8-112"><a href="#cb8-112" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tab_spanner</span>(<span class="st">"Cases"</span>, </span>
+<span id="cb8-113"><a href="#cb8-113" aria-hidden="true" tabindex="-1"></a>                <span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"cases_cum"</span>,</span>
+<span id="cb8-114"><a href="#cb8-114" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_new"</span>,</span>
+<span id="cb8-115"><a href="#cb8-115" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_avg"</span>,</span>
+<span id="cb8-116"><a href="#cb8-116" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"cases_avg_per_100k"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb8-117"><a href="#cb8-117" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tab_spanner</span>(<span class="st">"Deaths"</span>, </span>
+<span id="cb8-118"><a href="#cb8-118" aria-hidden="true" tabindex="-1"></a>                <span class="at">columns =</span> <span class="fu">c</span>(<span class="st">"deaths_cum"</span>,</span>
+<span id="cb8-119"><a href="#cb8-119" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_new"</span>,</span>
+<span id="cb8-120"><a href="#cb8-120" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg"</span>,</span>
+<span id="cb8-121"><a href="#cb8-121" aria-hidden="true" tabindex="-1"></a>                           <span class="st">"deaths_avg_per_100k"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb8-122"><a href="#cb8-122" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cols_label</span>(<span class="at">state_name=</span> <span class="st">"Jurisdiction"</span>,</span>
+<span id="cb8-123"><a href="#cb8-123" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_cum =</span> <span class="st">"Total"</span>,</span>
+<span id="cb8-124"><a href="#cb8-124" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_new =</span> <span class="st">"New"</span>,</span>
+<span id="cb8-125"><a href="#cb8-125" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_avg =</span> <span class="st">"Avg"</span>,</span>
+<span id="cb8-126"><a href="#cb8-126" aria-hidden="true" tabindex="-1"></a>               <span class="at">cases_avg_per_100k =</span> <span class="st">"Avg per 100k"</span>,</span>
+<span id="cb8-127"><a href="#cb8-127" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_cum =</span> <span class="st">"Total"</span>,</span>
+<span id="cb8-128"><a href="#cb8-128" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_new =</span> <span class="st">"New"</span>,</span>
+<span id="cb8-129"><a href="#cb8-129" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_avg =</span> <span class="st">"Avg"</span>,</span>
+<span id="cb8-130"><a href="#cb8-130" aria-hidden="true" tabindex="-1"></a>               <span class="at">deaths_avg_per_100k =</span> <span class="st">"Avg per 100k"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb8-131"><a href="#cb8-131" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gt_theme_espn</span>()</span>
+<span id="cb8-132"><a href="#cb8-132" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-133"><a href="#cb8-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-134"><a href="#cb8-134" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Cases, United States</span></span>
+<span id="cb8-135"><a href="#cb8-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-138"><a href="#cb8-138" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb8-139"><a href="#cb8-139" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(cases_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#440154FF"</span>)</span>
+<span id="cb8-140"><a href="#cb8-140" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-141"><a href="#cb8-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-142"><a href="#cb8-142" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Hospital Admissions, United States</span></span>
+<span id="cb8-143"><a href="#cb8-143" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-146"><a href="#cb8-146" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb8-147"><a href="#cb8-147" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(hosp_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#f27f27"</span>)</span>
+<span id="cb8-148"><a href="#cb8-148" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-149"><a href="#cb8-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-150"><a href="#cb8-150" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Deaths, United States</span></span>
+<span id="cb8-151"><a href="#cb8-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-154"><a href="#cb8-154" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb8-155"><a href="#cb8-155" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(deaths_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#31688EFF"</span>)</span>
+<span id="cb8-156"><a href="#cb8-156" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-157"><a href="#cb8-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-158"><a href="#cb8-158" aria-hidden="true" tabindex="-1"></a><span class="fu">### `r params$timeframe` Change in COVID-19 Testing, United States</span></span>
+<span id="cb8-159"><a href="#cb8-159" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-162"><a href="#cb8-162" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb8-163"><a href="#cb8-163" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_epi_curve</span>(lab_nat_tbl, params<span class="sc">$</span>timeframe, <span class="st">"#e3de42"</span>)</span>
+<span id="cb8-164"><a href="#cb8-164" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

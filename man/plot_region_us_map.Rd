@@ -2,16 +2,13 @@
 % Please edit documentation in R/plot_region_map.R
 \name{plot_region_us_map}
 \alias{plot_region_us_map}
-\title{plot_region_map}
+\title{plot_region_us_map}
 \usage{
-plot_region_us_map(region_number = 1)
-}
-\arguments{
-\item{region_number}{Region number}
+plot_region_us_map()
 }
 \value{
 map of US with region highlighted
 }
 \description{
-plot_region_map
+plot_region_us_map
 }

@@ -9,8 +9,8 @@ execute:
 params:
     username: "ovt1"
     juris: "VA"
-    refreshData: false 
-    timeframe: "Daily"
+    refreshData: true 
+    timeframe: "Monthly"
 ---
 
 ```{r setup}

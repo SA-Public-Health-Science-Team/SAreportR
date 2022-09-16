@@ -17,28 +17,114 @@ params:
 ```{r setup}
 library(tidyverse)
 library(flextable)
+library(gt)
+library(gtExtras)
 devtools::load_all()
 theme_set(theme_classic())
 ```
 
 ```{r load_data}
-cases_nat_tbl  <- get_case_death_nat_tbl(username = params$username) |> select(!contains("deaths"))
-deaths_nat_tbl <- get_case_death_nat_tbl(username = params$username) |> select(!contains("cases"))
-hosp_nat_tbl   <- get_hosp_nat_tbl(username = params$username)
-lab_nat_tbl    <- get_lab_nat_tbl(username = params$username)
+case_death_nat_tbl <- get_case_death_nat_tbl(username = params$username)
+
+cases_nat_tbl <- case_death_nat_tbl |> 
+    select(!contains("deaths"))
+
+deaths_nat_tbl <- case_death_nat_tbl |> 
+    select(!contains("cases"))
+
+case_death_jur_tbl <- get_case_death_juris_tbl(username = params$username) |>  
+    mutate(cases_date = lubridate::ymd(cases_date))
+
+hosp_nat_tbl       <- get_hosp_nat_tbl(username = params$username)
+lab_nat_tbl        <- get_lab_nat_tbl(username = params$username)
 ```
 
 ### `r params$timeframe` COVID Report, United States
 
 ```{r}
 #| echo: false
-cases_nat_row  <- cases_nat_tbl  |> filter(cases_date == max(cases_date))
-deaths_nat_row <- deaths_nat_tbl |> filter(deaths_date == max(deaths_date))
-lab_nat_row    <- lab_nat_tbl  |> filter(testvol_date == max(testvol_date)) |> select(!contains('new'))
-hosp_nat_row   <- hosp_nat_tbl |> filter(hosp_date == max(hosp_date))
+
+
+cases_nat_row  <- case_death_nat_tbl |> 
+    select(!contains("deaths")) |>
+    filter(cases_date == max(cases_date))
+
+
+deaths_nat_row <- case_death_nat_tbl |> 
+    select(!contains("cases")) |> 
+     filter(deaths_date == max(deaths_date))
+
+lab_nat_row    <- lab_nat_tbl  |> 
+    filter(testvol_date == max(testvol_date)) |> 
+    select(!contains('new'))
+
+hosp_nat_row   <- hosp_nat_tbl |> 
+    filter(hosp_date == max(hosp_date))
 
 create_summary_table(cases_nat_row,deaths_nat_row,lab_nat_row,hosp_nat_row) |> flextable()
 
+```
+
+```{r}
+case_death_jur_tbl |>
+    mutate(date = cases_date) |> 
+    filter(date >= max(date)-30) |> 
+    arrange(date) |> 
+    group_by(state_name) |> 
+    summarise(cases_trend =  list(cases_new),
+              deaths_trend =  list(deaths_new),
+              cases_cum = cases_cum[which.max(date)],
+              cases_new = cases_new[which.max(date)],
+              cases_avg = cases_avg[which.max(date)],
+              cases_avg_per_100k = cases_avg_per_100k[which.max(date)],
+              deaths_cum = deaths_cum[which.max(date)],
+              deaths_new = deaths_new[which.max(date)],
+              deaths_avg = deaths_avg[which.max(date)],
+              deaths_avg_per_100k = deaths_avg_per_100k[which.max(date)],
+              .groups = "drop"
+              ) |> 
+    select(-cases_trend,-deaths_trend) |> 
+    gt()   |> 
+    fmt_integer(columns = c("cases_cum",
+                           "cases_new",
+                           "cases_avg",
+                           "deaths_cum",
+                           "deaths_new",
+                           "deaths_avg")) |> 
+    fmt_number(columns = c("cases_avg_per_100k",
+                           "deaths_avg_per_100k"),
+               decimals = 1) |> 
+    # gt_plt_sparkline(deaths_trend, 
+    #                  palette = c("black", 
+    #                              "black", 
+    #                              "black", 
+    #                              "red", 
+    #                              "lightgrey"),
+    #                  fig_dim = c(15,25),
+    #                  same_limit = TRUE,
+    #                  label = FALSE) |> 
+    # gt_plt_dist(cases_trend) |> 
+    gt_color_rows(columns = c("cases_avg_per_100k","deaths_avg_per_100k")) |> 
+    tab_spanner("Cases", 
+                columns = c("cases_cum",
+                           "cases_new",
+                           "cases_avg",
+                           "cases_avg_per_100k")) |> 
+    tab_spanner("Deaths", 
+                columns = c("deaths_cum",
+                           "deaths_new",
+                           "deaths_avg",
+                           "deaths_avg_per_100k")) |> 
+    cols_label(state_name= "Jurisdiction",
+               cases_cum = "Total",
+               cases_new = "New",
+               cases_avg = "Avg",
+               cases_avg_per_100k = "Avg per 100k",
+               deaths_cum = "Total",
+               deaths_new = "New",
+               deaths_avg = "Avg",
+               deaths_avg_per_100k = "Avg per 100k") |> 
+    gt_theme_espn()
 ```
 
 ### `r params$timeframe` Change in COVID-19 Cases, United States

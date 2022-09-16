@@ -8,17 +8,18 @@ execute:
   warning: false 
 params:
     username: "ovt1"
-    region: 6
+    region: 1
     refreshData: false 
-    timeframe: "Weekly"
+    timeframe: "Daily"
 ---
 
 ```{r setup}
 library(tidyverse)
 library(flextable)
+library(gt)
+library(gtExtras)
 library(maps)
 library(mapdata)
-
 library(usmap)
 devtools::load_all()
 theme_set(theme_classic())
@@ -26,42 +27,22 @@ theme_set(theme_classic())
 
 # Region `r params$region` `r params$timeframe` COVID Report
 
+::: {layout-ncol="2"}
+::: {.column width="70%"}
 ```{r}
-#| column: margin
-
-plot_region_us_map(params$region)
-
-plot_region_map(params$region)
-
-```
-
-```{r, refresh-data, eval = params$refreshData}
-get_case_death_reg_tbl(username = params$username) |> write_rds(here::here("data/case_death_reg_tbl.rds"))
-
-get_hosp_reg_tbl(username = params$username) |> write_rds(here::here("data/hosp_reg_tbl.rds"))
-
-get_lab_reg_tbl(username = params$username)|> write_rds(here::here("data/lab_reg_tbl.rds"))
-```
-
-```{r eval=FALSE}
-
-
-plot_region_map(params$region)
-```
-
-```{r}
-case_reg_tbl  <- read_rds(here::here("data/case_death_reg_tbl.rds")) |> 
-                            strip_region() |> 
-                            filter(fema_region == params$region) |> 
-                            select(!contains("deaths"))
-death_reg_tbl <- read_rds(here::here("data/case_death_reg_tbl.rds"))|> 
-                            strip_region() |> 
-                            filter(fema_region == params$region) |>  
-                            select(!contains("cases"))
-hosp_reg_tbl  <- read_rds(here::here("data/hosp_reg_tbl.rds"))|> 
+case_death_jur_tbl <- read_rds(here::here("data/cases_deaths_juris_tbl.rds"))|> 
+    filter(fema_region_number ==  params$region) 
+case_death_reg_tbl <- read_rds(here::here("data/case_death_reg_tbl.rds")) |> 
                             strip_region() |> 
                             filter(fema_region == params$region)
-lab_reg_tbl   <- read_rds(here::here("data/lab_reg_tbl.rds"))|> 
+case_reg_tbl   <- case_death_reg_tbl  |> 
+                            select(!contains("deaths"))
+death_reg_tbl  <- case_death_reg_tbl  |>  
+                            select(!contains("cases"))
+hosp_reg_tbl   <- read_rds(here::here("data/hosp_reg_tbl.rds"))|> 
+                            strip_region() |> 
+                            filter(fema_region == params$region)
+lab_reg_tbl    <- read_rds(here::here("data/lab_reg_tbl.rds"))|> 
                             strip_region() |> 
                             filter(fema_region == params$region)
 
@@ -82,6 +63,91 @@ bind_cols(case_reg_tbl  |> filter(cases_date   == max(cases_date)),
            change,
            `7cum`) |> 
     flextable()
+
+```
+:::
+
+::: {.column width="30%"}
+::: {layout-nrow="2"}
+![](images/regional-offices.png)
+
+```{r}
+plot_region_map(params$region)
+```
+:::
+:::
+:::
+
+```{r, refresh-data, eval = params$refreshData}
+get_case_death_reg_tbl(username = params$username ) |> write_rds(here::here("data/case_death_reg_tbl.rds"))
+
+get_hosp_reg_tbl(username = params$username) |> write_rds(here::here("data/hosp_reg_tbl.rds"))
+
+get_lab_reg_tbl(username = params$username)|> write_rds(here::here("data/lab_reg_tbl.rds"))
+```
+
+## Cases and Deaths by Jurisdiction
+
+```{r}
+case_death_jur_tbl |>
+    mutate(date = cases_date) |> 
+    filter(date >= max(date)-30) |> 
+    arrange(date) |> 
+    group_by(state_name) |> 
+    summarise(cases_trend =  list(cases_new),
+              deaths_trend =  list(deaths_new),
+              cases_cum = cases_cum[which.max(date)],
+              cases_new = cases_new[which.max(date)],
+              cases_avg = cases_avg[which.max(date)],
+              cases_avg_per_100k = cases_avg_per_100k[which.max(date)],
+              deaths_cum = deaths_cum[which.max(date)],
+              deaths_new = deaths_new[which.max(date)],
+              deaths_avg = deaths_avg[which.max(date)],
+              deaths_avg_per_100k = deaths_avg_per_100k[which.max(date)],
+              .groups = "drop"
+              ) |> 
+    select(-cases_trend,-deaths_trend) |> 
+    gt()   |> 
+    fmt_integer(columns = c("cases_cum",
+                           "cases_new",
+                           "cases_avg",
+                           "deaths_cum",
+                           "deaths_new",
+                           "deaths_avg")) |> 
+    fmt_number(columns = c("cases_avg_per_100k",
+                           "deaths_avg_per_100k"),
+               decimals = 1) |> 
+    # gt_plt_sparkline(deaths_trend, 
+    #                  palette = c("black", 
+    #                              "black", 
+    #                              "black", 
+    #                              "red", 
+    #                              "lightgrey"),
+    #                  fig_dim = c(15,25),
+    #                  same_limit = TRUE,
+    #                  label = FALSE) |> 
+    # gt_plt_dist(cases_trend) |> 
+    gt_color_rows(columns = c("cases_avg_per_100k","deaths_avg_per_100k")) |> 
+    tab_spanner("Cases", 
+                columns = c("cases_cum",
+                           "cases_new",
+                           "cases_avg",
+                           "cases_avg_per_100k")) |> 
+    tab_spanner("Deaths", 
+                columns = c("deaths_cum",
+                           "deaths_new",
+                           "deaths_avg",
+                           "deaths_avg_per_100k")) |> 
+    cols_label(state_name= "Jurisdiction",
+               cases_cum = "Total",
+               cases_new = "New",
+               cases_avg = "Avg",
+               cases_avg_per_100k = "Avg per 100k",
+               deaths_cum = "Total",
+               deaths_new = "New",
+               deaths_avg = "Avg",
+               deaths_avg_per_100k = "Avg per 100k") |> 
+    gt_theme_espn()
 
 ```
 

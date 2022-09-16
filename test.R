@@ -1,65 +1,55 @@
-library(usmap)
-library(ggplot2)
-
 region <- 1
 
+case_death_tbl <- read_rds(here::here("data/cases_deaths_juris_tbl.rds"))
 
 
 
-state_in_region <- pop |>
-    filter(fema_region == region) |>
-    pull(juris)
-
-plot_usmap(include = state_in_region) +
-    geom_text(data = abbr)
-    labs(title = glue::glue("Region {region}"))
-
-
-
-
-
-library(ggplot2)
-library(maps)
-library(mapdata)
-
-plot_region <- function(region_number = 1){
-
-
-    pop <- read_rds(here::here("data/pop.rds")) |> mutate(juris_name = str_to_lower(juris_name))
-
-
-    state <- map_data('state') |>
-        left_join(pop, by = c("region" = "juris_name")) |>
-        filter(fema_region == region_number)
-
-
-    region_colors <- read_rds(here::here("data/region_colors.rds"))
-
-    region_color  <- region_colors[region]
-
-
-
-    ggplot(data=state, aes(x=long, y=lat, fill=fema_region, group=group)) +
-        geom_polygon(color = "white") +
-        guides(fill=FALSE) +
-        scale_fill_manual(values = region_colors) +
-        theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
-              axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
-        ggtitle('U.S. Map with States') +
-        coord_fixed(1.3)
-
-
-}
-
-plot_region(2)
-as.data.frame(state.name,state.abb)
+case_death_tbl |>
+    mutate(date = cases_date) |>
+    filter(date >= max(date)-30) |>
+    arrange(date) |>
+    group_by(state) |>
+    summarise(cases_trend =  list(cases_new),
+              deaths_trend =  list(deaths_new),
+              cases_cum = cases_cum[which.max(date)],
+              cases_new = cases_new[which.max(date)],
+              cases_avg = cases_avg[which.max(date)],
+              cases_avg_per_100k = cases_avg_per_100k[which.max(date)],
+              deaths_cum = deaths_cum[which.max(date)],
+              deaths_new = deaths_new[which.max(date)],
+              deaths_avg = deaths_avg[which.max(date)],
+              deaths_avg_per_100k = deaths_avg_per_100k[which.max(date)],
+              .groups = "drop"
+              ) |>
+    select(-cases_trend,-deaths_trend) |>
+    gt()   |>
+    fmt_integer(columns = c("cases_cum",
+                           "cases_new",
+                           "cases_avg",
+                           "deaths_cum",
+                           "deaths_new",
+                           "deaths_avg")) |>
+    fmt_number(columns = c("cases_avg_per_100k",
+                           'deaths_avg_per_100k'),
+               decimals = 1) |>
+    # gt_plt_sparkline(deaths_trend,
+    #                  palette = c("black",
+    #                              "black",
+    #                              "black",
+    #                              "red",
+    #                              "lightgrey"),
+    #                  fig_dim = c(15,25),
+    #                  same_limit = TRUE,
+    #                  label = FALSE) |>
+    # gt_plt_dist(cases_trend) |>
+    gt_color_rows(columns = c("cases_avg","deaths_avg")) |>
+    gt_theme_espn()
 
 
-pop_temp <- cbind(data.frame(state.name), data.frame(state.abb))
+l
 
 
-
-
-read_rds(here::here("data/pop.rds"))  |>
-    mutate(fema_region = str_remove(fema_region, "Region ") |> as.numeric())|>
-    write_rds(here::here("data/pop.rds"))
+gt_sparkline_tab <- mtcars %>%
+    dplyr::group_by(cyl) %>%
+    # must end up with list of data for each row in the input dataframe
+    dplyr::summarize(mpg_data = list(mpg), .groups = "drop")

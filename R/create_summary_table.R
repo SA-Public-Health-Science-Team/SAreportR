@@ -24,11 +24,11 @@ create_summary_table <-  function(...){
     )  |>
     arrange(indicator)  |>
     mutate(indicator = case_when(
-        indicator == "cases"   ~ "Cases^[]",
-        indicator == "hosp"    ~ "Hospital Admissions^",
-        indicator == "deaths"  ~ "Deaths*",
-        indicator == "testvol" ~ "Test Volume†",
-        indicator == "testpos" ~ "Test Positivity†",
+        indicator == "cases"   ~ "Cases",
+        indicator == "hosp"    ~ "Hospital Admissions",
+        indicator == "deaths"  ~ "Deaths",
+        indicator == "testvol" ~ "Test Volume",
+        indicator == "testpos" ~ "Test Positivity",
         TRUE ~ "NA")
     ) %>%
     select(-date)

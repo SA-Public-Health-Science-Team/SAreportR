@@ -54,7 +54,8 @@ readr::read_csv(paste0(
             cases_change        = get_per_change(cases_avg, date),
             deaths_change       = get_per_change(deaths_avg, date),
             cases_avg_per_100k  = (cases_avg/pop) * 100000,
-            deaths_avg_per_100k = (deaths_avg/pop)* 100000
+            deaths_avg_per_100k = (deaths_avg/pop)* 100000,
+            fema_region         = fema_region
         )|>
         ungroup() |>
     # mutate(across(!ends_with("change"), ~ format(.x,
@@ -103,7 +104,6 @@ get_case_death_reg_tbl <- function(username,
                New_case,
                tot_death,
                new_death) |>
-        mutate(juris = if_else(juris == "NY", "NYX", juris)) |>
         left_join(pop) |>
         group_by(date, fema_region) |>
         summarise(cases_cum  = sum(tot_cases),

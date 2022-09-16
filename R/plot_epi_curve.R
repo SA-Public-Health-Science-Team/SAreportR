@@ -43,7 +43,7 @@ plot_epi_curve <- function(data_tbl, timeframe, color){
 
     avg_range <- if_else(timeframe == "Daily",  7,
                          if_else(timeframe == "Weekly", 14,
-                                 if_else(timeframe == "Monthly",0,0)))
+                                 if_else(timeframe == "Monthly",30,0)))
    prepped_data <-  data |>
         rename(period := {{period}}) |>
         select(date, new, period) |> arrange(date) |>
@@ -58,18 +58,19 @@ plot_epi_curve <- function(data_tbl, timeframe, color){
                                     date))
 
    ylimit <- max(prepped_data$new) * 1.1
+   ylimmit_14_day <- max(prepped_data$avg) * 1.1
 
    prepped_data |>
         ggplot(aes(y = new,
                    x = period)) +
         geom_col(fill=color)  +
-        geom_line(aes(y = avg,
+        {if(timeframe != "Monthly")geom_line(aes(y = avg,
                       group = group),
-                  size=1) +
+                  size=1)} +
 
-         scale_y_continuous(labels = scales::label_number(big.mark = ","),
-        #                    sec.axis =  sec_axis( trans=~./7, name="14-Day Average"),
-                            limits = c(0, ylimit)) +
+         # scale_y_continuous(labels = scales::label_number(big.mark = ","),
+         #                    sec.axis =  sec_axis( trans=~./7, name="14-Day Average"),
+         #                    limits = c(0, ylimmit_14_day)) +
         theme(axis.text.x = element_text(angle = 40,
                                          vjust=0.5)) +
         scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
