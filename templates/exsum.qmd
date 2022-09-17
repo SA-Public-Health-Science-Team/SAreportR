@@ -1,17 +1,22 @@
 ---
-title: "CDC COVID-19 Report"
-format: 
+title: '`r params$timeframe` COVID Report, United States'
+format:
+ # docx:
+ #  toc: true
+ #  toc-depth: 2
+ #  reference-doc: reference_templates/Exsum_reference.docx
   html:
-    code-fold: true
-    code-tools: true
+    toc: true
+    code-fold: false
+    code-tools: false
 editor: visual
 execute: 
-  echo: true
+  echo: false
   warning: false 
 params:
     username: "ovt1"
     refreshData: FALSE
-    timeframe: "Daily"
+    timeframe: "Weekly"
 ---
 
 ```{r setup}
@@ -39,7 +44,10 @@ hosp_nat_tbl       <- get_hosp_nat_tbl(username = params$username)
 lab_nat_tbl        <- get_lab_nat_tbl(username = params$username)
 ```
 
-### `r params$timeframe` COVID Report, United States
+
+# Summary
+
+## `r params$timeframe` COVID-19 Summary Table, United States
 
 ```{r}
 #| echo: false
@@ -65,88 +73,171 @@ create_summary_table(cases_nat_row,deaths_nat_row,lab_nat_row,hosp_nat_row) |> f
 
 ```
 
-```{r}
-case_death_jur_tbl |>
-    mutate(date = cases_date) |> 
-    filter(date >= max(date)-30) |> 
-    arrange(date) |> 
-    group_by(state_name) |> 
-    summarise(cases_trend =  list(cases_new),
-              deaths_trend =  list(deaths_new),
-              cases_cum = cases_cum[which.max(date)],
-              cases_new = cases_new[which.max(date)],
-              cases_avg = cases_avg[which.max(date)],
-              cases_avg_per_100k = cases_avg_per_100k[which.max(date)],
-              deaths_cum = deaths_cum[which.max(date)],
-              deaths_new = deaths_new[which.max(date)],
-              deaths_avg = deaths_avg[which.max(date)],
-              deaths_avg_per_100k = deaths_avg_per_100k[which.max(date)],
-              .groups = "drop"
-              ) |> 
-    select(-cases_trend,-deaths_trend) |> 
-    gt()   |> 
-    fmt_integer(columns = c("cases_cum",
-                           "cases_new",
-                           "cases_avg",
-                           "deaths_cum",
-                           "deaths_new",
-                           "deaths_avg")) |> 
-    fmt_number(columns = c("cases_avg_per_100k",
-                           "deaths_avg_per_100k"),
-               decimals = 1) |> 
-    # gt_plt_sparkline(deaths_trend, 
-    #                  palette = c("black", 
-    #                              "black", 
-    #                              "black", 
-    #                              "red", 
-    #                              "lightgrey"),
-    #                  fig_dim = c(15,25),
-    #                  same_limit = TRUE,
-    #                  label = FALSE) |> 
-    # gt_plt_dist(cases_trend) |> 
-    gt_color_rows(columns = c("cases_avg_per_100k","deaths_avg_per_100k")) |> 
-    tab_spanner("Cases", 
-                columns = c("cases_cum",
-                           "cases_new",
-                           "cases_avg",
-                           "cases_avg_per_100k")) |> 
-    tab_spanner("Deaths", 
-                columns = c("deaths_cum",
-                           "deaths_new",
-                           "deaths_avg",
-                           "deaths_avg_per_100k")) |> 
-    cols_label(state_name= "Jurisdiction",
-               cases_cum = "Total",
-               cases_new = "New",
-               cases_avg = "Avg",
-               cases_avg_per_100k = "Avg per 100k",
-               deaths_cum = "Total",
-               deaths_new = "New",
-               deaths_avg = "Avg",
-               deaths_avg_per_100k = "Avg per 100k") |> 
-    gt_theme_espn()
-```
 
-### `r params$timeframe` Change in COVID-19 Cases, United States
+## `r params$timeframe` Trends in COVID-19 Cases, Hospitalizations, Deaths, and SARS-CoV Testing, United States
 
+::: {.grid}
+
+::: {.g-col-6}
+
+### Cases
 ```{r}
 plot_epi_curve(cases_nat_tbl, params$timeframe, "#440154FF")
 ```
 
-### `r params$timeframe` Change in COVID-19 Hospital Admissions, United States
+:::
+
+::: {.g-col-6}
+### Hospital Admissions
 
 ```{r}
 plot_epi_curve(hosp_nat_tbl, params$timeframe, "#f27f27")
 ```
 
-### `r params$timeframe` Change in COVID-19 Deaths, United States
+:::
+
+::: {.g-col-6}
+### Deaths
 
 ```{r}
 plot_epi_curve(deaths_nat_tbl, params$timeframe, "#31688EFF")
 ```
 
-### `r params$timeframe` Change in COVID-19 Testing, United States
+:::
+
+::: {.g-col-6}
+###  Testing
 
 ```{r}
 plot_epi_curve(lab_nat_tbl, params$timeframe, "#e3de42")
 ```
+:::
+
+:::
+
+
+
+# Cases
+## Top Jurisdictions by 7-Day Average per 100,000 Population
+
+```{r}
+cd_jur_fil_tbl <- case_death_jur_tbl |>
+    mutate(date = cases_date) |> 
+    filter(date >= max(date)-30) |> 
+    arrange(date) |> 
+    group_by(state_name) |> 
+    mutate(cases_new_7day  = cases_new  |> zoo::rollsum(k=7, fill = 0, align = "right"),
+           deaths_new_7day = deaths_new |> zoo::rollsum(k=7, fill = 0)) |> 
+    ungroup() |> 
+    group_by(state_name) |> 
+    summarise(cases_trend =  list(cases_new),
+              deaths_trend =  list(deaths_new),
+              cases_cum = cases_cum[which.max(date)],
+              cases_new = cases_new[which.max(date)],
+              cases_new_7day = cases_new_7day[which.max(date)],
+              cases_avg = cases_avg[which.max(date)],
+              cases_avg_per_100k = cases_avg_per_100k[which.max(date)],
+              deaths_cum = deaths_cum[which.max(date)],
+              deaths_new = deaths_new[which.max(date)],
+              deaths_new_7day = deaths_new_7day[which.max(date)],
+              deaths_avg = deaths_avg[which.max(date)],
+              deaths_avg_per_100k = deaths_avg_per_100k[which.max(date)],
+              .groups = "drop"
+              )  
+```
+
+```{r}
+
+cd_jur_fil_tbl |> 
+    arrange(desc(cases_avg_per_100k)) |> 
+  #  head(10) |> 
+    relocate(cases_trend,  .after = cases_new_7day) |> 
+    relocate(deaths_trend, .after = deaths_new_7day) |> 
+    gt()   |> 
+    fmt_integer(columns = c("cases_cum",
+                           "cases_new",
+                           "cases_new_7day",
+                           "cases_avg",
+                           "deaths_cum",
+                           "deaths_new",
+                           "deaths_new_7day",
+                           "deaths_avg")) |> 
+    fmt_number(columns = c("cases_avg_per_100k",
+                           "deaths_avg_per_100k"),
+               decimals = 1) |> 
+    gt_plt_sparkline(deaths_trend,
+                     palette = c("black",
+                                 "black",
+                                 "black",
+                                 "red",
+                                 "lightgrey"),
+                     fig_dim = c(15,25),
+                     same_limit = FALSE,
+                     label = FALSE)  |> 
+    gt_plt_sparkline(cases_trend,
+                     palette = c("black",
+                                 "black",
+                                 "black",
+                                 "red",
+                                 "lightgrey"),
+                     fig_dim = c(15,25),
+                     same_limit = FALSE,
+                     label = FALSE) |>
+    gt_color_rows(columns = c("cases_avg_per_100k",
+                              "cases_avg",
+                              "deaths_avg",
+                              "deaths_avg_per_100k"))|> 
+    gt_color_rows(columns = c("cases_new",
+                           "cases_new_7day",
+                           "deaths_new",
+                           "deaths_new_7day"), palette = "ggsci::blue_material") |> 
+    tab_spanner("New",
+                columns = c("cases_new",
+                            "cases_new_7day",
+                            "cases_trend")) |> 
+    tab_spanner("Average",
+                columns = c("cases_avg",
+                           "cases_avg_per_100k")) |> 
+    cols_width(state_name~px(150),
+               cases_cum~px(100),
+               deaths_cum~px(100))|>
+    # tab_spanner("Cases", 
+    #             columns = c("cases_cum",
+    #                        "cases_new", 
+    #                        "cases_trend",
+    #                        "cases_avg",
+    #                        "cases_avg_per_100k")) |> 
+    # tab_spanner("Deaths", 
+    #             columns = c("deaths_cum",
+    #                        "deaths_new", 
+    #                        "deaths_trend",
+    #                        "deaths_avg",
+    #                        "deaths_avg_per_100k")) |> 
+    cols_label(state_name   = "Jurisdiction",
+               cases_cum    = "Total Cases",
+               cases_new    = "Last 24 Hours",
+               cases_new_7day    = "Last 7 Days",
+               cases_avg    = "7-Day Avg",
+               cases_avg_per_100k = "7-Day Avg per 100k",
+               cases_trend  = "Last 30 Days",
+               deaths_cum   = "Total",
+               deaths_new   = "Last 24 Hours",
+               deaths_avg   = "7-Day Avg",
+               deaths_new_7day    = "Last 7 Days",
+               deaths_avg_per_100k = "7-Day Avg per 100k",
+               deaths_trend = "Last 30 Days") |> 
+    cols_hide( c("deaths_cum",
+                           "deaths_new", 
+                           "deaths_trend",
+                           "deaths_avg",
+                           "deaths_avg_per_100k",
+                 "deaths_new_7day"))|> 
+    gt_theme_espn() |> 
+    tab_options(container.width = pct(100),
+                container.overflow.y = TRUE,
+                container.height = px(560),
+                table.width = pct(100))
+    
+```
+
+
