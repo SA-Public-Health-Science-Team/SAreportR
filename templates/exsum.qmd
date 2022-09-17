@@ -9,6 +9,7 @@ format:
     toc: true
     code-fold: false
     code-tools: false
+    theme: flatly
 editor: visual
 execute: 
   echo: false
@@ -16,7 +17,7 @@ execute:
 params:
     username: "ovt1"
     refreshData: FALSE
-    timeframe: "Weekly"
+    timeframe: "Daily"
 ---
 
 ```{r setup}
@@ -43,7 +44,6 @@ case_death_jur_tbl <- get_case_death_juris_tbl(username = params$username) |>
 hosp_nat_tbl       <- get_hosp_nat_tbl(username = params$username)
 lab_nat_tbl        <- get_lab_nat_tbl(username = params$username)
 ```
-
 
 # Summary
 
@@ -73,51 +73,44 @@ create_summary_table(cases_nat_row,deaths_nat_row,lab_nat_row,hosp_nat_row) |> f
 
 ```
 
-
 ## `r params$timeframe` Trends in COVID-19 Cases, Hospitalizations, Deaths, and SARS-CoV Testing, United States
 
-::: {.grid}
-
-::: {.g-col-6}
-
+::: grid
+::: g-col-6
 ### Cases
+
 ```{r}
 plot_epi_curve(cases_nat_tbl, params$timeframe, "#440154FF")
 ```
-
 :::
 
-::: {.g-col-6}
+::: g-col-6
 ### Hospital Admissions
 
 ```{r}
 plot_epi_curve(hosp_nat_tbl, params$timeframe, "#f27f27")
 ```
-
 :::
 
-::: {.g-col-6}
+::: g-col-6
 ### Deaths
 
 ```{r}
 plot_epi_curve(deaths_nat_tbl, params$timeframe, "#31688EFF")
 ```
-
 :::
 
-::: {.g-col-6}
-###  Testing
+::: g-col-6
+### Testing
 
 ```{r}
 plot_epi_curve(lab_nat_tbl, params$timeframe, "#e3de42")
 ```
 :::
-
 :::
 
-
-
 # Cases
+
 ## Top Jurisdictions by 7-Day Average per 100,000 Population
 
 ```{r}
@@ -127,7 +120,7 @@ cd_jur_fil_tbl <- case_death_jur_tbl |>
     arrange(date) |> 
     group_by(state_name) |> 
     mutate(cases_new_7day  = cases_new  |> zoo::rollsum(k=7, fill = 0, align = "right"),
-           deaths_new_7day = deaths_new |> zoo::rollsum(k=7, fill = 0)) |> 
+           deaths_new_7day = deaths_new |> zoo::rollsum(k=7, fill = 0, align = "right")) |> 
     ungroup() |> 
     group_by(state_name) |> 
     summarise(cases_trend =  list(cases_new),
@@ -150,7 +143,7 @@ cd_jur_fil_tbl <- case_death_jur_tbl |>
 
 cd_jur_fil_tbl |> 
     arrange(desc(cases_avg_per_100k)) |> 
-  #  head(10) |> 
+    head(10) |> 
     relocate(cases_trend,  .after = cases_new_7day) |> 
     relocate(deaths_trend, .after = deaths_new_7day) |> 
     gt()   |> 
@@ -234,10 +227,106 @@ cd_jur_fil_tbl |>
                  "deaths_new_7day"))|> 
     gt_theme_espn() |> 
     tab_options(container.width = pct(100),
-                container.overflow.y = TRUE,
-                container.height = px(560),
+                # container.overflow.y = TRUE,
+                # container.height = px(560),
                 table.width = pct(100))
     
 ```
 
+# Deaths
 
+## Top Jurisdictions by 7-Day Average per 100,000 Population
+
+```{r}
+
+cd_jur_fil_tbl |> 
+    arrange(desc(deaths_avg_per_100k)) |> 
+    head(10) |> 
+    relocate(cases_trend,  .after = cases_new_7day) |> 
+    relocate(deaths_trend, .after = deaths_new_7day) |> 
+    gt()   |> 
+    fmt_integer(columns = c("cases_cum",
+                           "cases_new",
+                           "cases_new_7day",
+                           "cases_avg",
+                           "deaths_cum",
+                           "deaths_new",
+                           "deaths_new_7day",
+                           "deaths_avg")) |> 
+    fmt_number(columns = c("cases_avg_per_100k",
+                           "deaths_avg_per_100k"),
+               decimals = 1) |> 
+    gt_plt_sparkline(deaths_trend,
+                     palette = c("black",
+                                 "black",
+                                 "black",
+                                 "red",
+                                 "lightgrey"),
+                     fig_dim = c(15,25),
+                     same_limit = FALSE,
+                     label = FALSE)  |> 
+    gt_plt_sparkline(cases_trend,
+                     palette = c("black",
+                                 "black",
+                                 "black",
+                                 "red",
+                                 "lightgrey"),
+                     fig_dim = c(15,25),
+                     same_limit = FALSE,
+                     label = FALSE) |>
+    gt_color_rows(columns = c("cases_avg_per_100k",
+                              "cases_avg",
+                              "deaths_avg",
+                              "deaths_avg_per_100k"))|> 
+    gt_color_rows(columns = c("cases_new",
+                           "cases_new_7day",
+                           "deaths_new",
+                           "deaths_new_7day"), palette = "ggsci::blue_material") |> 
+    tab_spanner("New",
+                columns = c("deaths_new",
+                            "deaths_new_7day",
+                            "deaths_trend")) |> 
+    tab_spanner("Average",
+                columns = c("deaths_avg",
+                           "deaths_avg_per_100k")) |> 
+    cols_width(state_name~px(150),
+               cases_cum~px(100),
+               deaths_cum~px(100))|>
+    # tab_spanner("Cases", 
+    #             columns = c("cases_cum",
+    #                        "cases_new", 
+    #                        "cases_trend",
+    #                        "cases_avg",
+    #                        "cases_avg_per_100k")) |> 
+    # tab_spanner("Deaths", 
+    #             columns = c("deaths_cum",
+    #                        "deaths_new", 
+    #                        "deaths_trend",
+    #                        "deaths_avg",
+    #                        "deaths_avg_per_100k")) |> 
+    cols_label(state_name   = "Jurisdiction",
+               cases_cum    = "Total Cases",
+               cases_new    = "Last 24 Hours",
+               cases_new_7day    = "Last 7 Days",
+               cases_avg    = "7-Day Avg",
+               cases_avg_per_100k = "7-Day Avg per 100k",
+               cases_trend  = "Last 30 Days",
+               deaths_cum   = "Total",
+               deaths_new   = "Last 24 Hours",
+               deaths_avg   = "7-Day Avg",
+               deaths_new_7day    = "Last 7 Days",
+               deaths_avg_per_100k = "7-Day Avg per 100k",
+               deaths_trend = "Last 30 Days") |> 
+    cols_hide( c("cases_cum",
+                           "cases_new", 
+                           "cases_trend",
+                           "cases_avg",
+                           "cases_avg_per_100k",
+                 "cases_new_7day"))|> 
+    gt_theme_espn() |> 
+    tab_options(container.width = pct(100),
+                # container.overflow.y = TRUE,
+                # container.height = px(560),
+                table.width = pct(100))
+    
+```

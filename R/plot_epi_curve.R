@@ -44,14 +44,18 @@ plot_epi_curve <- function(data_tbl, timeframe, color){
     avg_range <- if_else(timeframe == "Daily",  7,
                          if_else(timeframe == "Weekly", 14,
                                  if_else(timeframe == "Monthly",30,0)))
+    mutliplier <- if_else(timeframe == "Daily",  1,
+                          if_else(timeframe == "Weekly", 7,
+                                  if_else(timeframe == "Monthly",30,0)))
    prepped_data <-  data |>
         rename(period := {{period}}) |>
         select(date, new, period) |> arrange(date) |>
-        mutate( avg_holder  = get_mean(new, days = avg_range)) |>
+        mutate( avg_hold  = get_mean(new, days = avg_range)) |>
+       mutate( avg_holder  = avg_hold * mutliplier) |>
         group_by(period) |>
         summarise(date  = max(date),
                   new   = sum(new),
-                  avg   = avg_holder [which.max(date)] ,
+                  avg   = avg_holder [which.max(date)],
                   group = 'group') |> arrange(date) |>
         ungroup() |>
         mutate(period = fct_reorder(period,
