@@ -9,7 +9,6 @@ format:
     toc: true
     code-fold: false
     code-tools: false
-    theme: flatly
 editor: visual
 execute: 
   echo: false
@@ -17,7 +16,7 @@ execute:
 params:
     username: "ovt1"
     refreshData: FALSE
-    timeframe: "Daily"
+    timeframe: "Weekly"
 ---
 
 ```{r setup}
@@ -26,7 +25,8 @@ library(flextable)
 library(gt)
 library(gtExtras)
 devtools::load_all()
-theme_set(theme_classic())
+source("../R/theme_ben.R")
+theme_set(theme_ben())
 ```
 
 ```{r load_data}

@@ -72,9 +72,7 @@ plot_epi_curve <- function(data_tbl, timeframe, color){
                       group = group),
                   size=1)} +
 
-         # scale_y_continuous(labels = scales::label_number(big.mark = ","),
-         #                    sec.axis =  sec_axis( trans=~./7, name="14-Day Average"),
-         #                    limits = c(0, ylimmit_14_day)) +
+       scale_y_continuous(labels = scales::label_number(big.mark = ",")) +
         theme(axis.text.x = element_text(angle = 40,
                                          vjust=0.5)) +
         scale_x_discrete(guide = guide_axis(check.overlap = TRUE))

@@ -80,5 +80,11 @@ prepped_data |>
           axis.line = element_blank(),
           strip.text = element_text(size = rel(0.5),
                                     face = "bold",
-                                    color = "black"
-          ))
+                                    color = "black"),
+          legend.title = element_blank(),
+          legend.text = element_text(size = rel(1), face = "bold"),
+          legend.key = element_rect(fill = "white", colour = "white"),
+         # legend.key.size = unit(0.5, "lines"),
+          legend.background = element_rect(fill = "white", colour = "white"),
+          legend.position="top"
+          )+ guides(fill = guide_legend(nrow = 1))

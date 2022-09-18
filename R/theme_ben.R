@@ -7,7 +7,7 @@
 #'
 #' @examples
 theme_ben <- function(base_size = 14) {
-    theme_bw(base_size = base_size) %+replace%
+    theme_classic(base_size = base_size) %+replace%
         theme(
             # L'ensemble de la figure  set the format of figure title and subtitle
             plot.title = element_text(size = rel(0.8), face = "bold", hjust = 0.5),
