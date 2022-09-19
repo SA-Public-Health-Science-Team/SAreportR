@@ -16,4 +16,6 @@ Imports:
     magrittr,
     usmap,
     mapdata,
-    maps
+    maps,
+    shinydashboard,
+    geofacet

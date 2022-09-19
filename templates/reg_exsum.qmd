@@ -25,6 +25,21 @@ devtools::load_all()
 theme_set(theme_classic())
 ```
 
+```{r refresh_data, eval = params$refreshData}
+get_case_death_juris_tbl(username = params$username) |> 
+    write_rds(here::here("data/cases_deaths_juris_tbl.rds"))
+
+get_case_death_reg_tbl(username = params$username) |> 
+    write_rds(here::here("data/case_death_reg_tbl.rds"))
+
+get_hosp_reg_tbl(username = params$username) |> 
+    write_rds(here::here("data/hosp_reg_tbl.rds"))
+
+get_lab_reg_tbl(username = params$username) |> 
+    write_rds(here::here("data/lab_reg_tbl.rds"))
+```
+
+
 # Region `r params$region` `r params$timeframe` COVID Report
 
 ::: {layout-ncol="2"}

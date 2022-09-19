@@ -50,7 +50,7 @@ readr::read_csv(paste0(
             cases_avg           = get_mean(cases_new) |> round(),
             deaths_avg          = get_mean(deaths_new)|> round(),
             cases_7cum          = get_juris_7day_cum_per_100k(cases_new, pop = pop),
-            deaths_7cum         = get_juris_7day_cum_per_100k(deaths_new,pop = pop),
+            deaths_7cum         = get_juris_7day_cum_per_100k(deaths_new, pop = pop),
             cases_change        = get_per_change(cases_avg, date),
             deaths_change       = get_per_change(deaths_avg, date),
             cases_avg_per_100k  = (cases_avg/pop) * 100000,
@@ -64,7 +64,7 @@ readr::read_csv(paste0(
         mutate(cases_date  = date,
                deaths_date = date,
                juris = juris |> stringr::str_trim()) |>
-        select(-date,-pop)
+        select(-date)
 }
 
 #' Load, clean, and analyze regional case and death table
