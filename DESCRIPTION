@@ -18,4 +18,6 @@ Imports:
     mapdata,
     maps,
     shinydashboard,
-    geofacet
+    geofacet,
+    shinyjs,
+    shiny

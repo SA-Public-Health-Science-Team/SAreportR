@@ -7,8 +7,9 @@ editor: visual
 ## 
 
 ```{r}
+library(DiagrammeR)
 DiagrammeR("
-  graph LR
+  graph LR 
     A[Final Counts]-->D[Clean Raw Data]
     B[Unified Dataset]-->D
     C[Hospital State]-->D

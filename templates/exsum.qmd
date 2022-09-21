@@ -1,22 +1,22 @@
 ---
 title: '`r params$timeframe` COVID Report, United States'
-format:
- # docx:
- #  toc: true
- #  toc-depth: 2
- #  reference-doc: reference_templates/Exsum_reference.docx
+format: 
+  # docx:
+  #   toc: true
+  #   toc-depth: 2
+  #   reference-doc: reference_templates/Exsum_reference.docx
   html:
     toc: true
-    code-fold: false
-    code-tools: false
+    code-fold: true
+    code-tools: true
 editor: visual
 execute: 
-  echo: false
+  echo: true
   warning: false 
 params:
     username: "ovt1"
-    refreshData: FALSE
-    timeframe: "Weekly"
+    refreshData: false
+    timeframe: "Daily"
 ---
 
 ```{r setup}
@@ -27,6 +27,25 @@ library(gtExtras)
 library(geofacet)
 devtools::load_all()
 theme_set(theme_ben())
+```
+
+```{r eval=TRUE}
+library(DiagrammeR)
+DiagrammeR("
+  graph LR 
+    A[Final Counts]-->D[Clean Raw Data]
+    B[Unified Dataset]-->D
+    C[Hospital State]-->D
+    D-->E[Final Counts Clean]
+    D-->F[Unified Dataset Clean]
+    D-->G[Hospital State Clean]
+    H[Hospital National]-->I[Calculate National Metrics]
+    E-->I
+    F-->I
+    E-->J[Calculate State Metrics]
+    F-->J
+    G-->J
+")
 ```
 
 ```{r refresh_data, eval = params$refreshData}
@@ -45,9 +64,8 @@ get_lab_nat_tbl(username = params$username) |>
 
 ```
 
-
 ```{r load_data}
-case_death_nat_tbl <- read_rds(here::here("data/case_death_nat_tbl.rds"))
+case_death_nat_tbl <- read_rds(here::here("data/case_death_nat_tbl.rds")) 
 
 cases_nat_tbl      <- case_death_nat_tbl |> 
     select(!contains("deaths"))
@@ -66,28 +84,32 @@ lab_nat_tbl        <- read_rds(here::here("data/lab_nat_tbl.rds"))
 ## `r params$timeframe` COVID-19 Summary Table, United States
 
 ```{r}
-#| echo: false
-
 
 cases_nat_row  <- case_death_nat_tbl |> 
-    select(!contains("deaths")) |>
+    select(!contains("deaths"))|> 
+    mutate_if(is.double, format, big.mark = ",") |>
     filter(cases_date == max(cases_date))
 
 
 deaths_nat_row <- case_death_nat_tbl |> 
     select(!contains("cases")) |> 
+    mutate_if(is.double, format, big.mark = ",")|> 
      filter(deaths_date == max(deaths_date))
 
 lab_nat_row    <- lab_nat_tbl  |> 
     filter(testvol_date == max(testvol_date)) |> 
     select(!contains('new'))
 
-hosp_nat_row   <- hosp_nat_tbl |> 
+hosp_nat_row   <- hosp_nat_tbl|> 
+    mutate_if(is.double, format, big.mark = ",") |> 
     filter(hosp_date == max(hosp_date))
 
 create_summary_table(cases_nat_row,deaths_nat_row,lab_nat_row,hosp_nat_row) |> flextable()
 
 ```
+
+
+
 
 ## `r params$timeframe` Trends in COVID-19 Cases, Hospitalizations, Deaths, and SARS-CoV Testing, United States
 
@@ -127,7 +149,7 @@ plot_epi_curve(lab_nat_tbl, params$timeframe, "#e3de42")
 
 # Cases
 
-## Top Jurisdictions by 7-Day Average per 100,000 Population
+## Top 10 Jurisdictions by 7-Day Average per 100,000 Population
 
 ```{r}
 cd_jur_fil_tbl <- case_death_jur_tbl |>
@@ -249,8 +271,8 @@ cd_jur_fil_tbl |>
     
 ```
 
+## New Cases per 100,000 Population by Jurisdiction
 
-## New Cases by Jurisdiction
 ```{r}
 
 case_death_jur_tbl |> 
@@ -258,10 +280,9 @@ case_death_jur_tbl |>
     plot_geofacet_epicurve(params$timeframe)
 ```
 
-
 # Deaths
 
-## Top Jurisdictions by 7-Day Average per 100,000 Population
+## Top 10 Jurisdictions by 7-Day Average per 100,000 Population
 
 ```{r}
 
@@ -355,4 +376,13 @@ cd_jur_fil_tbl |>
                 # container.height = px(560),
                 table.width = pct(100))
     
+```
+
+## New Deaths per 100,000 Population by Jurisdiction
+
+```{r}
+
+case_death_jur_tbl |> 
+    select(!starts_with("cases")) |> 
+    plot_geofacet_epicurve(params$timeframe)
 ```

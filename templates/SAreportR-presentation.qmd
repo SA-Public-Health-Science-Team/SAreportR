@@ -38,17 +38,31 @@ Other technologies working under the hood include:
 
 ## Components of SAreportR
 
+-   Shiny Dashboard
 -   Templates
 -   Functions
--   A Dashboard
 -   Documentation
 
-## Templates
+# Front-end
+
+## Dashboard
+
+-   R Shiny
+-   Allows users to:
+    -   select which documents to generate
+
+    -   select the parameters of each document
+
+# Back-end
+
+## Quarto / Rmarkdown Templates
 
 ::: panel-tabset
-###### Quarto / Rmarkdown
+###### Code Chunks
 
-###### Parameterized
+![](images/Screenshot%202022-09-20%20104212.png)
+
+###### Parameters
 
 ``` yaml
 ---
@@ -66,30 +80,38 @@ params:
 ## Functions
 
 -   Main Functions
+    -   included in Quarto / Rmarkdown Templates
+
+    -   used to process data sets, create plots, format and output tables, etc.
 -   Utility Functions
+    -   included within main functions
 
-## Dashboard
+    -   used to format columns, add calculated columns, scale plots, etc.
 
--   R Shiny
--   Allows users to:
-    -   select which documents to generate
-
-    -   select the parameters of each document
+# Documentation
 
 ## Documentation
 
 -   Function documentation
 
+    -   Can be accessed two ways
+
+        -   within the IDE (RStudio)
+
+        -   via pkgdown site
+
 -   Document SOPs
 
 # Implications for Current Workflow
 
-## Changes in Workflow
+## Shifts in Current Workflow
 
--   Compiling reports -\> SDLC (features, bugs, performance, etc.)
+-   Compiling reports -\> SDLC (features, bugs, performance, unit testing, etc.)
 
 -   Screen shots AND Power BI -\> R (ggplot/highcharteR)
 
 -   Copy & paste AND Excel -\> R (flextable/gt)
 
 -   OneDrive/SharePoint -\> Git (GitHub/GitLab)
+
+# End

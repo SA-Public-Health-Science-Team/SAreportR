@@ -1,7 +1,14 @@
 ---
-title: "CDC COVID-19 Report"
-format: html
-code-fold: true
+title:  '`r params$timeframe` COVID Report, `r params$juris`'
+format:
+ # docx:
+ #  toc: true
+ #  toc-depth: 2
+ #  reference-doc: reference_templates/Exsum_reference.docx
+  html:
+    toc: true
+    code-fold: false
+    code-tools: false
 editor: visual
 execute: 
   echo: false
@@ -34,10 +41,10 @@ get_lab_juris_tbl(username = params$username)|> write_rds( here::here("data/lab_
 # `r state$state.name` `r params$timeframe` COVID Report
 
 ```{r, load_data}
-case_juris_tbl  <- read_rds(here::here("data/cases_deaths_tbl.rds")) |> 
+case_juris_tbl  <- read_rds(here::here("data/case_death_jur_tbl.rds")) |> 
                             filter(juris == params$juris) |> 
                             select(!contains("deaths"))
-death_juris_tbl <- read_rds(here::here("data/cases_deaths_tbl.rds")) |> 
+death_juris_tbl <- read_rds(here::here("data/case_death_jur_tbl.rds")) |> 
                             filter(juris == params$juris) |> 
                             select(!contains("cases"))
 hosp_juris_tbl  <- read_rds(here::here("data/hosp_juris_tbl.rds"))|>

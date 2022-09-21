@@ -1,6 +1,7 @@
 
 library(shiny)
 library(shinydashboard)
+library(shinyjs)
 
 jurisdictions <- list("AK","AL","AR","AS","AZ","CA","CNMI","CO","CT","DC",
                       "DE","FL","FSM","GA","GU","HI","IA","ID","IL","IN","KS",
@@ -17,11 +18,11 @@ ui<-dashboardPage(skin="red",
                       tags$style(HTML(".sidebar-menu li a { font-size: 16px; }")),
                       width = "30%",
                       sidebarMenu(
-                          menuItem("Director's Brief",
-                                   tabName="dbb",
-                                   icon=icon("file"),
-                                   selected=TRUE),
                           menuItem("Director's Executive Summary",
+                                   tabName="dbb",
+                                   icon=icon("file-html"),
+                                   selected=TRUE),
+                          menuItem("Director's Brief",
                                    tabName="exsum",
                                    icon=icon("file-word")),
                           menuItem("Response Update Report",
@@ -42,132 +43,56 @@ ui<-dashboardPage(skin="red",
                       tabItems(
                           tabItem("dbb",
                                   fluidPage(
-                                      mainPanel(
-                                          tabsetPanel(
-                                              tabPanel("Case and Death Reporting",
-                                                       checkboxGroupInput("zero_reporting",
-                                                                          "Zero New Cases & Deaths Reported:",
-                                                                          choiceNames = jurisdictions,
-                                                                          choiceValues = jurisdictions,
-                                                                          inline = TRUE),
-                                                       checkboxGroupInput("reporting_cadence",
-                                                                          "Reporting Cadence Exculsions:",
-                                                                          choiceNames = jurisdictions,
-                                                                          choiceValues = jurisdictions,
-                                                                          inline = TRUE),
-                                                       checkboxGroupInput("historical_reconciliation",
-                                                                          "Historical Reconciliation Esclusions:",
-                                                                          choiceNames = jurisdictions,
-                                                                          choiceValues = jurisdictions,
-                                                                          inline = TRUE),
-                                                       checkboxGroupInput("backlog",
-                                                                          "Backlog: Exclusions",
-                                                                          choiceNames = jurisdictions,
-                                                                          choiceValues = jurisdictions,
-                                                                          inline = TRUE)),
-                                              tabPanel("Hospitalizations",
-                                                       fluidRow(
-                                                           id = "form",
+                                      shinyjs::useShinyjs(),
+                                      fluidRow(
+                                          id = "form",
 
-                                                           textInput("name", "Submitted by", ""),
-                                                           textAreaInput("favourite_pkg", "Add Text"),
-                                                           fileInput("file1", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file2", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file3", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file4", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv"))
-                                                       )),
-                                              tabPanel("Vaccination",
-                                                       fluidRow(
-                                                           id = "form",
+                                          selectInput("level", "Administrative Level:",
+                                                      c("National" = "National" ,
+                                                        "Regional" = "Regional",
+                                                        "Jurisdictional" = "Jurisdictional")),
+                                          shinyjs::hidden(tags$div(
+                                              id = "regionSelect",
+                                              selectInput("region", "Region:",
+                                                          c(1:10)
+                                              )
+                                          )),
+                                          shinyjs::hidden(tags$div(
+                                              id = "jurisSelect",
+                                              selectInput("juris", "Jurisdiction:",
+                                                          jurisdictions)
+                                          )),
 
-                                                           textInput("name", "Submitted by", ""),
-                                                           textAreaInput("favourite_pkg", "Add Text"),
-                                                           fileInput("file1", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file2", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file3", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file4", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv"))
-                                                       )),
-                                              tabPanel("Testing",
-                                                       fluidRow(
-                                                           id = "form",
-
-                                                           textInput("name", "Submitted by", ""),
-                                                           textAreaInput("favourite_pkg", "Add Text"),
-                                                           fileInput("file1", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file2", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file3", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv")),
-                                                           fileInput("file4", "Upload Image",
-                                                                     multiple = FALSE,
-                                                                     accept = c("text/csv",
-                                                                                "text/comma-separated-values,text/plain",
-                                                                                ".csv"))
-                                                       )),
-                                              tabPanel("Download",
-                                                       downloadButton("downloadReport", "Download DBB")))
+                                          selectInput("timeframe", "Timeframe:",
+                                                      c("Daily",
+                                                        "Weekly",
+                                                        "Monthly"))
                                       ),
+
+                                      shinyjs::hidden(tags$div(
+                                          id = "nationButton",
+                                          fluidRow(downloadButton("downloadNational",
+                                                                  "Download Report"))
+                                      )),
+
+                                      shinyjs::hidden(tags$div(
+                                          id = "regionButton",
+                                          fluidRow(downloadButton("downloadRegional",
+                                                              "Download Report"))
+                                          )),
+
+                                      shinyjs::hidden(tags$div(
+                                          id = "jurisButton",
+                                          fluidRow(downloadButton("downloadJurisdictional",
+                                                                  "Download Report"))
+                                      )),
 
                                       textOutput("txt"),
                                       width=12
                                   )),
                           tabItem("exsum",
                                   fluidPage(
-                                      fluidRow(
-                                          id = "form",
 
-                                          selectInput("level", "Administrative Level:",
-                                                      c("National" = "cyl",
-                                                        "Regional" = "am",
-                                                        "Jurisdictional" = "gear")),
-
-                                          selectInput("timeframe", "Timeframe:",
-                                                      c("Daily" = "cyl",
-                                                        "Weekly" = "am",
-                                                        "Monthly" = "gear"))
-                                      )
                                   ),
                                   downloadButton("downloadExSum", "Download")),
                           tabItem("rur",
@@ -239,28 +164,138 @@ ui<-dashboardPage(skin="red",
 server<-function(input,output){
 
 
-    output$downloadReport <- downloadHandler(
-        filename = paste0("DBB_",
-                          (Sys.Date() +1) %>%
-                              format("%m_%d_%Y"),
-                          ".docx"),
+    # output$downloadReport <- downloadHandler(
+    #     filename = paste0("DBB_",
+    #                       (Sys.Date() +1) %>%
+    #                           format("%m_%d_%Y"),
+    #                       ".docx"),
+    #     content = function(file){
+    #         output <- rmarkdown::render(
+    #             input = here::here("templates/exsum.qmd"),
+    #             output_format = "html",
+    #
+    #             params = list(zero_report_states = input$zero_report,
+    #                           reporting_cadence = input$reporting_cadence,
+    #                           historical_rec = input$historical_reconciliation,
+    #                           backlog = input$backlog)
+    #         )
+    #
+    #         file.copy(output, file)
+    #
+    #
+    #
+    #     })
+
+    # in the server
+
+    observeEvent(input$level, {
+        if (input$level == "National") {
+            shinyjs::show("nationButton")
+        } else {
+            shinyjs:: hide("nationButton")
+        }
+    })
+
+    observeEvent(input$level, {
+        if (input$level == "Regional") {
+            shinyjs::show("regionSelect")
+        } else {
+            shinyjs:: hide("regionSelect")
+        }
+    })
+
+
+    observeEvent(input$level, {
+        if (input$level == "Regional") {
+            shinyjs::show("regionButton")
+        } else {
+            shinyjs:: hide("regionButton")
+        }
+    })
+
+    observeEvent(input$level, {
+        if (input$level == "Jurisdictional") {
+            shinyjs::show("jurisSelect")
+        } else {
+            shinyjs:: hide("jurisSelect")
+        }
+    })
+
+    observeEvent(input$level, {
+        if (input$level == "Jurisdictional") {
+            shinyjs::show("jurisButton")
+        } else {
+            shinyjs:: hide("jurisButton")
+        }
+    })
+
+    output$downloadNational <-  downloadHandler(
+        filename = "NA",
+
         content = function(file){
-            output <- rmarkdown::render(
-                input = "DBB_v2.Rmd",
-                output_format = "word_document",
-
-                params = list(zero_report_states = input$zero_report,
-                              reporting_cadence = input$reporting_cadence,
-                              historical_rec = input$historical_reconciliation,
-                              backlog = input$backlog)
+            output <-  quarto::quarto_render(
+                input = here::here('templates/exsum.qmd'),
+                output_format = "html",
+                output_file =  paste0('../templates/',
+                                      "US ",
+                                      input$timeframe,
+                                      " Report ",
+                                      (Sys.Date()) %>%
+                                          format("%Y%m%d"),
+                                      ".html"),
+                execute_params = list(timeframe =  input$timeframe)
             )
-
             file.copy(output, file)
-
 
 
         })
 
+    output$downloadRegional <-  downloadHandler(
+        filename = "NA",
+
+        content = function(file){
+            output <-  quarto::quarto_render(
+                input = here::here('templates/reg_exsum.qmd'),
+                output_format = "html",
+                output_file =  paste0('../templates/',
+                                      "Region ",
+                                      input$region,
+                                      " - ",
+                                      input$timeframe,
+                                      " Report ",
+                                      (Sys.Date()) %>%
+                                          format("%Y%m%d"),
+                                      ".html"),
+                execute_params = list(region = input$region,
+                                      timeframe =  input$timeframe)
+            )
+            file.copy(output, file)
+
+
+        })
+
+    output$downloadJurisdictional <-  downloadHandler(
+        filename = "NA",
+
+        content = function(file){
+            output <-  quarto::quarto_render(
+                input = here::here('templates/state_exsum.qmd'),
+                output_format = "html",
+                output_file =  paste0('../templates/',
+                                      input$juris,
+                                      " - ",
+                                      input$timeframe,
+                                      " Report ",
+                                      (Sys.Date()) %>%
+                                          format("%Y%m%d"),
+                                      ".html"),
+                execute_params = list(juris = input$juris,
+                                      timeframe =  input$timeframe)
+            )
+            file.copy(output, file)
+
+
+        })
 
 
     output$downloadExSum <- downloadHandler(

@@ -72,7 +72,8 @@ plot_epi_curve <- function(data_tbl, timeframe, color){
                       group = group),
                   size=1)} +
 
-       scale_y_continuous(labels = scales::label_number(big.mark = ",")) +
+       scale_y_continuous(labels = scales::label_number(big.mark = ","),
+                          limits = c(0,NA)) +
         theme(axis.text.x = element_text(angle = 40,
                                          vjust=0.5)) +
         scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
@@ -105,18 +106,18 @@ plot_geofacet_epicurve <- function(data_tbl, timeframe){
                     "Region 9",
                     "Region 10")
 
-    date_col <-  case_death_jur_tbl |>
+    date_col <-  data_tbl |>
         select(contains("date"),contains("cases"),pop,fema_region) |>
         select(1) |>
         colnames()
 
-    new_col <-  case_death_jur_tbl |>
+    new_col <-  data_tbl |>
         select(contains("new")) |>
         select(1) |>
         colnames()
 
 
-    data <-  case_death_jur_tbl |>
+    data <-  data_tbl |>
         rename(date  := {{date_col}},
                new   := {{new_col}}) |>
         mutate(date       = date  |> lubridate::ymd(),
@@ -174,6 +175,7 @@ plot_geofacet_epicurve <- function(data_tbl, timeframe){
         #                                      size=1)} +
 
         scale_y_continuous(labels = scales::label_number(big.mark = ","),
+                           limits = c(0,NA),
                            guide = guide_axis(check.overlap = TRUE)) +
         # theme(axis.text.x = element_text(angle = 40,
         #                                  vjust=0.5)) +
