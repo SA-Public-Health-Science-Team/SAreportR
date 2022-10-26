@@ -1,0 +1,25 @@
+---
+format: html
+editor: visual
+execute: 
+  warning: false
+  echo: false
+params:
+    state: "Maryland"
+---
+
+# State Facts
+
+```{r}
+# load data sets
+library(datasets)
+library(dplyr)
+
+# assign states data to variable
+state_facts <- data.frame(state.x77) |> 
+    tibble::rownames_to_column("state") |> 
+    filter(state == params$state)
+
+```
+
+In 1975, the estimated life expectancy in `r params$state` was `r state_facts$Life.Exp` years old.

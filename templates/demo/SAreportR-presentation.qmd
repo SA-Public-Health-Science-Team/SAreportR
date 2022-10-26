@@ -1,0 +1,162 @@
+---
+title: "Report Automation with SAreportR Package"
+subtitle: "Situational Awareness Analytical Capabilities"
+format: revealjs
+editor: visual
+author: 
+    - Sorie Dumbuya, MPH, PMP
+    - Jie Feng, PhD
+    - Meeyoung Park, MPH
+    
+title-slide-attributes:
+    data-background-image: "images/background.png"
+    data-background-size: contain
+    data-background-opacity: "80"
+---
+
+# Introduction
+
+## Purpose
+
+-   Describe where we are now with report generation
+-   Highlight the current burdens and challenges
+-   Introduce SAreportR as a proof of concept for improving the process
+-   Detail the benefits of the tool
+
+## Agenda
+
+-   Overview of current report generation process
+-   Describe SAreportR package
+    -   Overview
+
+    -   Key components
+
+    -   Demonstration
+-   Highlight key benefits
+-   Provide recommendations for moving forward
+
+# SAreportR
+
+## SAreportR Overview
+
+-   An SA-developed automated capability (R package)
+-   Serves as an app to automatically generate several types of response-related documents in various output formats
+-   Provides a graphical user interface (GUI) for end-users to specify criteria before generating documents
+
+## Key Technologies
+
+The key tools used to implement this workflow are:
+
+-   R / Python
+-   Quarto / Rmarkdown
+-   R Shiny
+
+Other tools working under the hood include:
+
+-   C++
+-   JavaScript
+-   HTML/CSS
+-   LaTeX
+
+## Components of SAreportR
+
+-   R Shiny Dashboard
+-   Quarto Templates
+-   Functions
+-   Robust Documentation
+
+## Dashboard
+
+-   R Shiny
+-   Allows users to:
+    -   select which documents to generate
+
+    -   select the parameters of each document
+
+# R Shiny Demonstration
+
+## Templates
+
+-   Developed with Quarto or Rmarkdown
+
+-   Can render various output formats
+
+    -   Word
+
+    -   HTML
+
+    -   PDF
+
+    -   Presentations
+
+        -   PPT
+
+        -   Reveal.js
+
+## Template Sections
+
+-   Markdown
+-   Code Chunks
+-   YAML Header
+    -   YAML Options (built-in)
+
+    -   Parameters (user specified)
+
+::: panel-tabset
+###### Code Chunks
+
+![](images/Screenshot%202022-09-20%20104212.png)
+
+###### Parameters
+
+``` yaml
+---
+title: "COVID Report"
+format: pdf
+author: Situational Awareness Public Health Science Team
+params:
+    timeframe: "Daily"
+    jurisdiction: "GA"
+    startdate:  "2022-01-01"
+---
+```
+:::
+
+## Functions
+
+-   Main Functions
+    -   included in Quarto / Rmarkdown Templates
+
+    -   used to process data sets, create plots, format and output tables, etc.
+-   Utility Functions
+    -   included within main functions
+
+    -   used to format columns, add calculated columns, scale plots, etc.
+
+# Documentation
+
+## Documentation
+
+-   Function documentation
+
+    -   Can be accessed two ways
+
+        -   within the IDE (RStudio)
+
+        -   via pkgdown site
+
+-   Document SOPs
+
+# Implications for Current Workflow
+
+## Shifts in Current Workflow
+
+-   Compiling reports -\> SDLC (features, bugs, performance, unit testing, etc.)
+
+-   Screen shots AND Power BI -\> R (ggplot/highcharteR)
+
+-   Copy & paste AND Excel -\> R (flextable/gt)
+
+-   OneDrive/SharePoint -\> Git (GitHub/GitLab)
+
+# End

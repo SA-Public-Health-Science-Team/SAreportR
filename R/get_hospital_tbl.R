@@ -31,7 +31,8 @@ get_hosp_juris_tbl <- function(username,
         select(juris,
                date,
                adm_all_covid_confirmed,
-               avg_adm_all_covid_confirmed
+               avg_adm_all_covid_confirmed,
+               total_patients_hospitalized_covid_confirmed_clean
         ) |>
         mutate(hosp_adm    = adm_all_covid_confirmed,
                hosp_cum    = cumsum(hosp_adm),
@@ -42,7 +43,8 @@ get_hosp_juris_tbl <- function(username,
             hosp_cum = hosp_cum %>% format(justify  = "right",
                                            big.mark = ","),
             hosp_new = hosp_new,
-            hosp_avg = hosp_avg
+            hosp_avg = hosp_avg,
+            total_patients =  total_patients_hospitalized_covid_confirmed_clean
         ) |>
         ungroup() |>
         left_join(pop) |>
@@ -93,7 +95,8 @@ get_hosp_reg_tbl <- function(username,
         select(fema_region,
                date,
                adm_all_covid_confirmed,
-               avg_adm_all_covid_confirmed
+               avg_adm_all_covid_confirmed,
+               total_patients_hospitalized_covid_confirmed_clean
         ) |>
         group_by(fema_region) |>
         mutate(hosp_adm    = adm_all_covid_confirmed,
@@ -105,7 +108,8 @@ get_hosp_reg_tbl <- function(username,
             hosp_cum = hosp_cum %>% format(justify  = "right",
                                            big.mark = ","),
             hosp_new = hosp_new,
-            hosp_avg = hosp_avg
+            hosp_avg = hosp_avg,
+            total_patients =  total_patients_hospitalized_covid_confirmed_clean
         ) |>
         ungroup()|>
         left_join(pop) |>
@@ -149,7 +153,8 @@ get_hosp_nat_tbl <- function(username,
                                 start_date  = start_date) |>
         select(date,
                adm_all_covid_confirmed,
-               avg_adm_all_covid_confirmed
+               avg_adm_all_covid_confirmed,
+               total_patients_hospitalized_covid_confirmed_clean
                ) |>
         mutate(hosp_adm    = adm_all_covid_confirmed,
                hosp_cum    = cumsum(hosp_adm),
@@ -160,7 +165,8 @@ get_hosp_nat_tbl <- function(username,
             hosp_cum = hosp_cum %>% format(justify  = "right",
                                               big.mark = ","),
             hosp_new = hosp_new,
-            hosp_avg = hosp_avg
+            hosp_avg = hosp_avg,
+            total_patients =  total_patients_hospitalized_covid_confirmed_clean
             ) |>
         ungroup() |>
         mutate(

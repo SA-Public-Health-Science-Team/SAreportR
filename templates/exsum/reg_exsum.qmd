@@ -1,0 +1,2256 @@
+---
+title: |
+   State of the Pandemic
+subtitle: |
+   Dr. Rochelle P. Walensky
+editor: visual
+execute:
+  echo: false
+  warning: false
+  message: false
+format: 
+  html:
+    toc: true
+params:
+  refreshData: true
+  timeframe: Weekly
+  region: 5
+---
+
+```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(flextable)
+library(zoo)
+library(scales)
+library(officer)
+library(png)
+library(readxl)
+library(lubridate)
+library(ggthemes)
+library(grid)
+library(gridExtra)
+library(readr)
+library(DBI)
+library(glue)
+library(ggplot2)
+library(webshot2)
+library(maps)
+library(mapdata)
+library(usmap)
+library(rlang)
+
+devtools::load_all()
+theme_set(theme_classic())
+
+#set the font of the table contents to 10, font type,and the padding
+set_flextable_defaults(
+  font.size = 10,font.family="Calibri",text.align="center",padding.top=0,padding.bottom=0,padding.left=0,padding.right=0
+  )
+```
+
+```{r Setup, include=FALSE}
+#set source code display, warnings display, messages display, figure size, figure dip
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning=FALSE,
+  message=FALSE,
+  fig.width = 20, 
+  fig.retina = 10,
+  fig.align="center"
+ )
+#set how small a number must be before scientific notation is used
+options(scipen = 100)
+
+```
+
+```{r ggplot_theme}
+#set plot format
+theme_set(theme_ben())
+```
+
+```{r, refresh-nat-data, eval = params$refreshData,warning=FALSE, message=FALSE, echo=FALSE}
+#get national case, death, hospital, and lab data
+cases_nat_tbl  <- get_case_death_nat_tbl(username = params$username) |> select(!contains("deaths"))
+
+deaths_nat_tbl <- get_case_death_nat_tbl(username = params$username) |> select(!contains("cases"))
+hosp_nat_tbl   <- get_hosp_nat_tbl(username = params$username)
+
+lab_nat_tbl    <- get_lab_nat_tbl(username = params$username)
+
+# vaccine data
+  vax_raw <- read_excel(paste0("C:/Users/",params$username,"/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/POWER BI/Data/vaccinations/COVID-TRACKER-AGGREGATES 2022.xlsx"), 
+                     sheet = "Trends",
+                     skip = 1)  %>%
+  filter(date_type == "Report") %>%
+  select(-date_type) %>%
+  mutate(Date = ymd(Date))
+  
+# vaccine summary data  
+  vax_summary_raw <- read_excel(paste0("C:/Users/",params$username,"/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/POWER BI/Data/vaccinations/COVID-TRACKER-AGGREGATES 2022.xlsx"), 
+                     sheet = "Summary",
+                     skip = 1) %>% 
+    filter(Location == "US" ) 
+
+# vaccine dempgraphics data
+vax_demo_raw <- read_excel(
+  paste0("C:/Users/",
+         params$username,
+         "/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/POWER BI/Data/vaccinations/COVID-TRACKER-AGGREGATES 2022.xlsx"),
+                     sheet = "Demographics",
+                     skip = 1) %>%
+  mutate(Date = ymd(Date)) %>% 
+  filter(Date == max(Date) & Demographic_category %>% str_detect("Ages"))
+
+# population data
+population_tbl <- read_excel(paste0("C:/Users/",
+                                   params$username,
+                                   "/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/POWER BI/Data/US Census Pop 2019.xlsx"), 
+                            sheet = "Combined Population")
+
+```
+
+```{r warning=FALSE, message=FALSE, echo=FALSE}
+# get username of user compiling report
+username <- Sys.getenv("USERNAME")
+tomorrow_date<-format(Sys.Date()+1,format="%A, %B %d, %Y")
+today_date<-format(Sys.Date(),format="%b %d, %Y")
+# case and death data
+
+
+# get max date from final counts csv. Should be day prior
+ cases_date_raw <- cases_nat_tbl %>% 
+     filter(cases_date == max(cases_date)) %>% 
+     head(1) %>% 
+     pull(cases_date) 
+ cases_date<-format(cases_date_raw,format="%b %d, %Y")
+ hosp_date_raw <- hosp_nat_tbl %>% 
+     filter(hosp_date == max(hosp_date)) %>% 
+     head(1) %>% 
+     pull(hosp_date) 
+ hosp_date<-format(hosp_date_raw,format="%b %d, %Y")
+ lab_date_raw <- lab_nat_tbl %>% 
+     filter(testpos_date == max(testpos_date)) %>% 
+     head(1) %>% 
+     pull(testpos_date) 
+ 
+ lab_date<-format(lab_date_raw,format="%b %d, %Y")
+ lab_range_start <- format(today()-20, "%b %d, %Y")
+ lab_range_end <- format(today()-7, "%b %d, %Y")
+ # get start date of lab percent positivity 
+ lab_pos_end <- format(today()-9, "%b %d, %Y")
+ # case and death data
+cases_raw <- read_csv(paste0(
+  "C:/Users/",
+  username,
+  "/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/DOMESTIC CASE COUNTS/US CASE COUNTS SPREADSHEET/CDC Final US Case Counts/final_counts_check.csv"),
+  guess_max = 3000,
+  show_col_types = FALSE) %>%
+  filter(submission_date >= ymd("2020-01-22")) %>% 
+  mutate(state_abbr = case_when(
+    state_abbr == "MP" ~ "CNMI", 
+    state_abbr == "VI" ~ "USVI", 
+    TRUE ~ state_abbr))
+
+
+  #get case and death historicals data 
+historical_bullets <- cases_raw %>%
+   
+  replace_na(list(historical_new_total_deaths = 0, 
+                  historical_new_total_cases = 0) 
+        ) %>%
+  mutate(historical_new_total_cases = case_when(
+        historical_new_total_cases < 0  ~ 0,
+        TRUE ~ historical_new_total_cases)
+        ) %>%
+  mutate(historical_new_total_deaths = case_when(
+        historical_new_total_deaths < 0 ~ 0,
+        TRUE ~ historical_new_total_deaths)
+        ) %>%
+  mutate(tot_hist_case  = sum(historical_new_total_cases),
+         tot_hist_death = sum(historical_new_total_deaths)
+        ) %>% 
+  pivot_longer(cols    =  c(historical_new_total_cases,
+                           historical_new_total_deaths),
+                names_to = "indicator"
+        ) %>%
+  mutate(indicator = indicator %>% 
+             str_remove("historical_new_total_")
+        ) %>%
+  select(submission_date,
+         state_name,
+         state_abbr,
+         tot_hist_case,
+         tot_hist_death,
+         indicator,
+         value
+        ) %>% 
+    group_by(indicator) %>%
+  summarize(
+    tot_hist     = sum(value),
+    today_total  = sum(value[submission_date == today()-1]),
+    current_7day = sum(value[submission_date >= as.Date(lubridate::now()) -7]),
+    prior_7day = sum(value[submission_date >= as.Date(lubridate::now()) -14 & submission_date <= as.Date(lubridate::now())-8])
+           ) %>%
+  ungroup() %>%
+  mutate(footnote = paste0(
+    "Of ",
+    format(tot_hist,big.mark   = ","),
+    " historical ",
+    indicator,
+    " reported retroactively, ",
+    format(today_total,big.mark   = ","),
+    " were reported on the most recent submission date; ",
+    format(current_7day,big.mark   = ","),
+    " in the current week; and ",
+    format(prior_7day,big.mark   = ","),
+    " in the prior week.")
+    ) %>%
+  select(footnote) %>% 
+  pull()
+```
+
+---
+title: |
+    CDC COVID-19 Response Update Report DIRECTOR'S EXECUTIVE SUMMARY\
+    `r tomorrow_date`
+---
+
+US Department of Health and Human Services\
+Centers for Disease Control and Prevention
+
+```{r reporting-jurisdictions, echo=FALSE, warning=FALSE, message=FALSE}
+
+#| tbl-cap: "reporting-jurisdictions"
+
+
+# get number of jurisdictions reporting
+get_reporting_count <- function(number) {
+ number_no_new_counts <-  cases_raw %>% 
+                            select(state_name,
+                                   state_abbr,
+                                   submission_date,
+                                   tot_cases,
+                                   New_case,
+                                   tot_death,
+                                   new_death) %>% 
+                      filter(submission_date == max(submission_date) & new_death == 0 & New_case == 0) %>% 
+                      nrow()
+ 
+ return(60 - number_no_new_counts + number)
+}
+
+number_no_report <- get_reporting_count(length(params$zero_report_states))
+
+
+list_no_report <- cases_raw %>% 
+  select(state_name,
+         state_abbr,
+         submission_date,
+         tot_cases,
+         New_case,
+         tot_death,
+         new_death) %>% 
+  filter(submission_date == max(submission_date) & new_death == 0 & New_case == 0) %>% 
+                      distinct(state_abbr) %>% 
+  filter(!state_abbr %in% params$zero_report_states) %>% 
+  arrange(state_abbr)
+```
+
+# COVID-19 Summary[^1] [^2] [^3]
+
+[^1]: \tiny Time period: Jan 22, 2020 - `r cases_date`; confirmed and probable cases and deaths. Number of jurisdictions reporting: `r number_no_report` of 60. Aggregate case and death data are updated Mon -- Sat. The total of new cases/deaths in the last 24 hours and 7-day averages do not include historical cases/deaths reported retroactively; historical cases/deaths are pending assignment to the appropriate dates. `r historical_bullets[1]` `r historical_bullets[2]`
+
+[^2]: \tiny Time period: Aug 01, 2020 - `r hosp_date`
+
+[^3]: \tiny Time period: Mar 01, 2020 - `r lab_date`; time period for test volume 7-day average and percent change: `r lab_range_start` - `r lab_range_end`
+
+```{r warning=FALSE, message=FALSE, echo=FALSE}
+
+#define flextable align and bold format
+align_bold_function<-function(dataset){
+  n<-ncol_keys(dataset)
+  dataset<-align(dataset,j=2:n,align="right",part="body")
+  dataset<-align(dataset,j=2:n,align="right",part="header")
+  dataset<-bold(dataset,j=1,bold=TRUE,part="body")
+  dataset<-bold(dataset,bold=TRUE,part="header")
+  return (dataset)
+}
+#define summary table format
+summary_table_format_function<-function(dataset){
+dataset<- hrule(dataset,rule="exact",part="body")
+dataset<-height(dataset,height=0.18,part="body")
+dataset<-width(dataset,j=1,width=1.6)
+dataset<- width(dataset,j=2,width=1.3)
+dataset<-width(dataset,j=3,width=1.1)
+dataset<-width(dataset,j=4,width=1.0)
+dataset<-width(dataset,j=5:6,width=1.7)
+dataset<-compose(dataset,part="body",i=1,j=1,value=as_paragraph("Cases",as_sup("1")))
+dataset<-compose(dataset,part="body",i=2,j=1,value=as_paragraph("Hospital Admissions",as_sup("2")))
+dataset<-compose(dataset,part="body",i=3,j=1,value=as_paragraph("Deaths",as_sup("1")))
+dataset<-compose(dataset,part="body",i=4,j=1,value=as_paragraph("Test Volume",as_sup("3")))
+dataset<-compose(dataset,part="body",i=5,j=1,value=as_paragraph("Test Positivity",as_sup("3")))
+dataset<-compose(dataset,part="header",j=2,value=as_paragraph("Cumulative Total"))
+dataset<-compose(dataset,part="header",j=3,value=as_paragraph("Daily"))
+dataset<-compose(dataset,part="header",j=4,value=as_paragraph("7-Day Daily Average"))
+dataset<-compose(dataset,part="header",j=5,value=as_paragraph("Change from Prior 7-Day Period"))
+dataset<-compose(dataset,part="header",j=6,value=as_paragraph("Cumulative 7-Day Rate per 100K"))
+dataset<-color(dataset,color="white",j=1,part="header")
+dataset<-color(dataset,color="grey",i=5,j=6,part="body")
+dataset<-color(dataset,color="grey",i=4:5,j=3,part="body")
+dataset<-align(dataset,align="center",part="header")
+dataset<-align(dataset,align="center",part="body")
+dataset<-align(dataset,j=1,align="left",part="body")
+dataset<-bold(dataset,j=1,part="body")
+dataset<-bold(dataset,part="header")
+}
+
+#bind tables
+table_bind <- bind_cols(
+            hosp_nat_tbl|> filter(hosp_date ==max(hosp_date)),
+           cases_nat_tbl |>  filter(cases_date ==max(cases_date)),
+                      deaths_nat_tbl |> filter(deaths_date == max(deaths_date)),
+                     
+                        lab_nat_tbl|> filter(testpos_date ==max(testpos_date)))
+#format table
+table_bind |>  
+  mutate(
+    hosp_new=hosp_new|>format(justify = "right",big.mark   =","),
+    hosp_avg=hosp_avg|>format(justify="right",big.mark=","),
+    cases_cum=cases_cum|>format(justify = "right",big.mark   =","),
+         cases_new=cases_new|>format(justify = "right",big.mark   =","),
+         cases_avg=cases_avg|>format(justify = "right",big.mark   =","),
+         deaths_cum=deaths_cum|>format(justify = "right",big.mark   = ","),
+         deaths_new=deaths_new|>format(justify = "right",big.mark   = ","),
+         deaths_avg=deaths_avg|>format(justify = "right",big.mark   = ","))|>
+   select(ends_with(c("date","cum","new",'avg',"change","7cum"))) |>
+  create_summary_table() |>subset(select=c(1,2,4,5,6,3))|>
+  flextable()|>
+  summary_table_format_function()|>
+  align_bold_function()
+  
+```
+
+Source: HHS Protect. Additional information available on [COVID Data Tracker](https://covid.cdc.gov/covid-data-tracker/#cases_casesper100klast7days) and in the [CDC COVID-19 Response Update](https://cdc.sharepoint.com/:f:/s/CPR-Responses/CovidMR/EmXuTs80CQtAgBQK81fzYJkBRwUOc1jgZ3YPa2L4vS6aiA?e=oiWyql)
+
+# COVID-19 Vaccinations in the United States[^4]
+
+[^4]: \tiny Includes data for US states, DC, US Territories, federal entities, and pharmacies.
+
+```{r vaccine-by-age-data, echo=FALSE, warning=FALSE, message=FALSE}
+#| tbl-cap: "vaccine-by-age-data"
+
+
+ #get vaccine data groupby by age
+vax_age_tbl <- vax_summary_raw %>%
+  select(Administered_Dose1_Recip, 
+         Administered_Dose1_Recip_5Plus,
+         Administered_Dose1_Recip_12Plus,
+         Administered_Dose1_Recip_18Plus,
+         Administered_Dose1_Recip_65Plus,
+         Administered_Dose1_Pop_Pct,
+         Administered_Dose1_Recip_5PlusPop_Pct,
+         Administered_Dose1_Recip_12PlusPop_Pct,
+         Administered_Dose1_Recip_18PlusPop_Pct,
+         Administered_Dose1_Recip_65PlusPop_Pct,
+         Series_Complete_Yes,
+         Series_Complete_Pop_Pct,
+         Series_Complete_5Plus,
+         Series_Complete_5PlusPop_Pct,
+         Series_Complete_12Plus,
+         Series_Complete_12PlusPop_Pct,
+         Series_Complete_18Plus,
+         Series_Complete_18PlusPop_Pct,
+         Series_Complete_65Plus,
+         Series_Complete_5PlusPop_Pct,
+         Series_Complete_65PlusPop_Pct,
+         Additional_Doses,
+         Additional_Doses_12Plus,                
+         Additional_Doses_18Plus,
+         Additional_Doses_65Plus,
+         Additional_Doses_Vax_Pct,
+         Additional_Doses_12Plus_Vax_Pct,
+         Additional_Doses_18Plus_Vax_Pct,
+         Additional_Doses_65Plus_Vax_Pct,
+         Second_Booster,
+         Second_Booster_12Plus,
+         Second_Booster_18Plus,
+         Second_Booster_65Plus,
+         Second_Booster_Vax_Pct, 
+         Second_Booster_12Plus_Vax_Pct,
+         Second_Booster_18Plus_Vax_Pct,
+         Second_Booster_65Plus_Vax_Pct) %>% 
+  pivot_longer(everything()) %>%  
+  mutate(dose     = case_when(
+                        name %>% str_detect("Dose1")            ~ "Dose1",
+                        name %>% str_detect("Series_Complete")  ~ "FullyVaxx",
+                        name %>% str_detect("Additional_Doses") ~ "Booster1",
+                        name %>% str_detect("Second_Booster")   ~ "Booster2",
+                        TRUE  ~ name),
+         metric    = case_when(
+                        name %>% 
+                          str_to_lower() %>%  
+                          str_detect("pop|pct") ~ "pct",
+                        TRUE                    ~ "count"),
+         age_group = case_when(
+                        name %>% str_detect("65Plus") ~ "≥65 Years",
+                        name %>% str_detect("5Plus")  ~ "≥5 Years",
+                        name %>% str_detect("12Plus") ~ "≥12 Years",
+                        name %>% str_detect("18Plus") ~ "≥18 Years",
+                        TRUE ~ "US Overall"
+         )) %>%
+  select(-name) %>% 
+  pivot_wider(names_from = c("dose", "metric"))
+ # get US Overall vaccine data and format it
+summary_text_numbers <- vax_age_tbl %>% 
+  filter(age_group == "US Overall") %>% 
+  select(Dose1_count, Dose1_pct) %>% 
+  mutate(Dose1_count = number(Dose1_count, scale = .000001 ,accuracy =  .1))
+ # get the total number and percentage of the vaccinated people
+summary_text_total <- summary_text_numbers$Dose1_count
+summary_text_pct <- summary_text_numbers$Dose1_pct
+ # get numbers of 12-17 and 5-11 ages of people vaccinated
+vax_minors_tbl <- vax_demo_raw %>%
+  select(Demographic_category,
+         Administered_Dose1,
+         Administered_Dose1_pct_agegroup,
+         Series_Complete_Yes,
+         Series_Complete_Pop_pct_agegroup,
+         Booster_Doses_Yes,
+         Booster_Doses_Vax_pct_agegroup ) %>% 
+  filter(Demographic_category %>% str_detect("12-17|5-11")) %>% 
+  rename(Dose1_count     = Administered_Dose1,
+         Dose1_pct       = Administered_Dose1_pct_agegroup,
+         FullyVaxx_count = Series_Complete_Yes,
+         FullyVaxx_pct   = Series_Complete_Pop_pct_agegroup,
+         Booster1_count  = Booster_Doses_Yes,
+         Booster1_pct    = Booster_Doses_Vax_pct_agegroup) %>% 
+  mutate(FullyVaxx_pct = FullyVaxx_pct %>% as.numeric(),
+         Dose1_pct   = Dose1_pct %>% as.numeric()) %>% 
+  mutate( age_group = Demographic_category %>% 
+           str_remove("Ages_") %>% 
+           str_replace("_yrs", " Years") 
+         ) %>% 
+  select(-Demographic_category)
+
+  # combine 2 vaccine tables and format it
+  vax_all_age_data <- vax_age_tbl %>% 
+    full_join(vax_minors_tbl) %>% 
+    mutate(age_group = age_group %>% factor(c("US Overall",
+                                              "5-11 Years",
+                                              "12-17 Years",
+                                              "≥5 Years",
+                                              "≥12 Years",
+                                              "≥18 Years",
+                                              "≥65 Years"))) %>% 
+    arrange(age_group) %>% 
+    mutate(Dose1_chr  = Dose1_count %>%  format(big.mark=","),
+           Full_chr   = FullyVaxx_count %>%  format(big.mark=","),
+           Boost1_chr = Booster1_count %>%  format(big.mark=","),
+           Boost2_chr = Booster2_count %>%  format(big.mark=","),
+           Dose1_pct  = (Dose1_pct /100) %>% percent(accuracy = .1),
+           FullyVaxx_pct = (FullyVaxx_pct /100) %>% percent(accuracy = .1),
+           Booster1_pct  = (Booster1_pct /100) %>% percent(accuracy = .1),
+           Booster2_pct  = (Booster2_pct /100) %>% percent(accuracy = .1))
+  
+  
+```
+
+**Over `r summary_text_total` million people or `r summary_text_pct`% of the population have received at least 1 dose.**[^5] [^6]
+
+[^5]: \tiny Currently, only those 50 and older are eligible for 2nd additional doses.
+
+[^6]: \tiny Due to the inclusion of single dose and two-dose vaccines in Fully Vaccinated counts and because some doses lack information on dose type (First Dose, Fully Vaccinated, Additional Dose), the sum of the percentages may not equal 100%.
+
+```{r vaccine-by-age-tbl, echo=FALSE, warning=FALSE, message=FALSE}
+#| tbl-cap: "vaccine-by-age-tbl"
+
+# get the first vaccine table
+vax_all_age_tbl <- vax_all_age_data %>%
+    mutate(Dose1    = glue("{Dose1_pct}(N={Dose1_chr})"),
+           FullyVaxx = glue("{FullyVaxx_pct}(N={Full_chr})"),
+           Booster1  = if_else(age_group%>%str_detect("5-11"),"N/A",as.character(glue("{Booster1_pct}(N={Boost1_chr})"))),
+           Booster2  = if_else(age_group %>%
+                                 str_detect("5-11|12-17|≥5"),
+                               "N/A",
+                               as.character(glue("{Booster2_pct}(N={Boost2_chr})")))
+    ) %>% 
+    flextable(col_keys = c("age_group",
+                           "Dose1",
+                           "FullyVaxx",
+                           "Booster1",
+                           "Booster2")) %>% 
+    
+    set_header_labels(age_group = "Age Group",
+                      Dose1     = "Received at Least 1 Dose",
+                      FullyVaxx = "Fully Vaccinated",
+                      Booster1  = "Received 1st Booster/Additional Dose",
+                      Booster2  = "Received 2nd Booster/Additional Dose"
+                      )
+#format the first vaccine table
+
+#add superscript
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="header",j=5,value=as_paragraph("Received 2nd Booster/Additional Dose",as_sup("5")))
+
+#set height and width
+vax_all_age_tbl<-hrule(vax_all_age_tbl,rule="exact",part="body")
+vax_all_age_tbl<-height(vax_all_age_tbl,height=0.18,part="body")
+vax_all_age_tbl<-width(vax_all_age_tbl,j=1,width=1.1)
+vax_all_age_tbl<-width(vax_all_age_tbl,j=2:3,width=1.7)
+vax_all_age_tbl<-width(vax_all_age_tbl,j=4:5,width=2.0)
+#rename the first column
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="body",i=1,j=1,value=as_paragraph("US Overall"))
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="body",i=2,j=1,value=as_paragraph("5-11 Years"))
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="body",i=3,j=1,value=as_paragraph("12-17 Years"))
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="body",i=4,j=1,value=as_paragraph("\U2265 5 Years"))
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="body",i=5,j=1,value=as_paragraph("\U2265 12 Years"))
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="body",i=6,j=1,value=as_paragraph("\U2265 18 Years"))
+vax_all_age_tbl<-compose(vax_all_age_tbl,part="body",i=7,j=1,value=as_paragraph("\U2265 65 Years"))
+vax_all_age_tbl<-color(vax_all_age_tbl,color="grey",i=2,j=4:5,part="body")
+vax_all_age_tbl<-color(vax_all_age_tbl,color="grey",i=3:4,j=5,part="body")
+#align and bold
+vax_all_age_tbl<-align_bold_function(vax_all_age_tbl)
+vax_all_age_tbl
+```
+
+```{r vaccine-trends, echo=FALSE, warning=FALSE, error = FALSE, message=FALSE}
+#| tbl-cap: "vaccine-trends"
+
+
+ # get total vaccination data
+vax_overall_doses <- vax_raw %>% 
+  filter(Date == max(Date)) %>% 
+  filter(Location == "US") %>%
+  select(Administered_Daily) %>% 
+  pull()
+
+ # get daily total vaccination data
+adm_daily_total <- vax_raw %>% 
+  filter(Date == max(Date) & Location == "US") %>% 
+  select(Administered_Daily) %>% 
+  pull()
+  
+ #get the second vaccine table
+vax_trends_tbl <- vax_raw %>% 
+  filter(Date == max(Date) | Date == max(Date)-7) %>% 
+  filter(Location == "US") %>% 
+  select(Date, 
+         Administered,
+         Administered_Daily,
+         Administered_7_Day_Rolling_Average,
+         Admin_Dose_1_Cumulative, 
+         Admin_Dose_1_Daily,
+         Admin_Dose_1_Day_Rolling_Average,
+         Series_Complete_Cumulative,
+         Series_Complete_Daily,
+         Series_Complete_Day_Rolling_Average,
+         Booster_Cumulative,
+         Booster_Daily, 
+         Booster_7_Day_Rolling_Average) %>% 
+  rename(Overall_cum     = Administered,
+         Overall_daily   = Administered_Daily,
+         Overall_avg     = Administered_7_Day_Rolling_Average,
+         FirstDose_cum   = Admin_Dose_1_Cumulative, 
+         FirstDose_daily = Admin_Dose_1_Daily,
+         FirstDose_avg   = Admin_Dose_1_Day_Rolling_Average,
+         FullyVax_cum    = Series_Complete_Cumulative,
+         FullyVax_daily  = Series_Complete_Daily,
+         FullyVax_avg    = Series_Complete_Day_Rolling_Average,
+         Booster_cum     = Booster_Cumulative,
+         Booster_daily   =  Booster_Daily, 
+         Booster_avg     =  Booster_7_Day_Rolling_Average) %>% 
+  pivot_longer(cols             = contains("_"),
+               names_to         = "indicator",
+               values_to        = "val", 
+               values_transform = list(val = as.character)) %>% 
+  separate(indicator, c("indicator", "metric"), sep="_") %>% 
+  pivot_wider(names_from = metric, values_from = val) %>% 
+   mutate(Date_label = case_when(
+    Date == max(Date) ~ "cur_avg",
+    TRUE ~ "prev_avg"
+  )) %>% 
+  mutate(indicator = case_when(
+    indicator == "Overall" ~ "Dose Administered",
+    indicator == "FirstDose" ~ "1st Dose", 
+    indicator == "FullyVax" ~ "Fully Vaccinated", 
+    indicator == "Booster" ~ "1st Additional Dose",
+    TRUE ~ "NA")) %>%
+  mutate(indicator = indicator %>% 
+           factor(levels = c("Dose Administered",
+                             "1st Dose", 
+                             "Fully Vaccinated", 
+                             "1st Additional Dose"))
+           ) %>% 
+  pivot_wider(names_from = Date_label,
+              values_from = avg) %>% 
+  group_by(indicator) %>% 
+  fill(prev_avg) %>% 
+  ungroup() %>% 
+  filter(Date == max(Date)) %>% 
+  mutate(across(3:6, as.numeric)) %>% 
+  mutate(pct_change = (cur_avg - prev_avg) / prev_avg) %>% 
+  mutate(adm_pct = case_when(
+    indicator %>% str_detect("Admin") ~ "N/A",
+    TRUE ~ (daily / adm_daily_total) %>% percent(accuracy = .1)
+   )) %>% 
+  mutate(across(3:6, comma)) %>%
+  mutate(pct_change = percent(pct_change, accuracy = .1) )%>% 
+  mutate(daily = glue("{daily} ({adm_pct})")) %>% 
+  
+  select(indicator, cum, daily, cur_avg, prev_avg, pct_change) %>%
+   flextable() %>%
+   set_header_labels(cum        = "Cumulative Total",
+                     daily      ="Daily (% of Doses Administered)^",
+                     cur_avg    = "Current 7-Day Daily Average",
+                     prev_avg   ="Prior 7-Day Daily Average",
+                     pct_change = "Percent Change") 
+
+  vax_date <- vax_raw  %>% arrange(desc(Date)) %>% head(1)  %>% pull(Date) %>% format("%B %d, %Y")
+  
+#format the second vaccine table
+
+  #add superscript
+  vax_trends_tbl<-compose(vax_trends_tbl,part="header",j=3,value=as_paragraph("Daily(% of Doses Administered)",as_sup("6")))
+#set height and width
+vax_trends_tbl<-hrule(vax_trends_tbl,rule="exact",part="body")
+vax_trends_tbl<-height(vax_trends_tbl,height=0.18,part="body")
+vax_trends_tbl<-width(vax_trends_tbl,j=1,width=1.5)
+vax_trends_tbl<-width(vax_trends_tbl,j=2:6,width=1.4)
+#color of the cell contents
+vax_trends_tbl<-color(vax_trends_tbl,color="white",j=1,part="header")
+#align and bold
+vax_trends_tbl<-align_bold_function(vax_trends_tbl)
+vax_trends_tbl
+```
+
+Data as of `r vax_date`, 06:00 ET \| Sources: Data Monitoring and Reporting Section, Vaccine Task Force; CDC COVID Tracker
+
+```{r map}
+#| column: margin
+#plot regional map
+plot_region_us_map()
+
+plot_region_map(params$region)
+```
+
+```{r, refresh-reg-data, eval = params$refreshData,warning=FALSE, message=FALSE, echo=FALSE}
+#get regional case, death, hospital, and lab data
+get_case_death_reg_tbl(username = params$username) |> write_rds(here::here("data/case_death_reg_tbl.rds"))
+
+get_hosp_reg_tbl(username = params$username) |> write_rds(here::here("data/hosp_reg_tbl.rds"))
+
+get_lab_reg_tbl(username = params$username)|> write_rds(here::here("data/lab_reg_tbl.rds"))
+
+```
+
+```{r, load_data,warning=FALSE, message=FALSE, echo=FALSE}
+#load regional data
+case_reg_tbl  <- read_rds(here::here("data/case_death_reg_tbl.rds")) |> 
+                            strip_region() |> 
+                            filter(fema_region == params$region) |> 
+                            select(!contains("deaths"))
+
+death_reg_tbl <- read_rds(here::here("data/case_death_reg_tbl.rds"))|> 
+                            strip_region() |> 
+                            filter(fema_region == params$region) |>  
+                            select(!contains("cases"))
+hosp_reg_tbl  <- read_rds(here::here("data/hosp_reg_tbl.rds"))|> 
+                            strip_region() |> 
+                            filter(fema_region == params$region)
+
+lab_reg_tbl   <- read_rds(here::here("data/lab_reg_tbl.rds"))|> 
+                            strip_region() |> 
+                            filter(fema_region == params$region)
+
+
+```
+
+# COVID-19 Summary, Region `r params$region`
+
+```{r region-summary}
+#| tbl-cap: "region-summary"
+
+
+#forma regional summary table
+table_bind <- bind_cols(
+            hosp_reg_tbl|> filter(hosp_date ==max(hosp_date)),
+           case_reg_tbl |>  filter(cases_date ==max(cases_date)),
+                      death_reg_tbl |> filter(deaths_date == max(deaths_date)),
+                     
+                        lab_reg_tbl|> filter(testpos_date ==max(testpos_date)))
+#format table
+table_bind |>  
+  mutate(
+    hosp_new=hosp_new|>format(justify = "right",big.mark   =","),
+    hosp_avg=hosp_avg|>format(justify="right",big.mark=","),
+    cases_cum=cases_cum|>format(justify = "right",big.mark   =","),
+         cases_new=cases_new|>format(justify = "right",big.mark   =","),
+         cases_avg=cases_avg|>format(justify = "right",big.mark   =","),
+         deaths_cum=deaths_cum|>format(justify = "right",big.mark   = ","),
+         deaths_new=deaths_new|>format(justify = "right",big.mark   = ","),
+         deaths_avg=deaths_avg|>format(justify = "right",big.mark   = ","))|>
+   select(ends_with(c("date","cum","new",'avg',"change","7cum"))) |>
+  create_summary_table() |>subset(select=c(1,2,4,5,6,3))|>
+  flextable()|>
+  summary_table_format_function()|>
+  align_bold_function()
+```
+
+```{r case,warning=FALSE, message=FALSE, echo=FALSE}
+#| tbl-cap: "case"
+
+
+#get the case dates
+cases_date_raw<-max(case_reg_tbl$cases_date)
+cases_Bdate<- cases_date_raw %>%format("%B %d, %Y")
+#get the case and death data current week start date
+cases_date_6<- format(cases_date_raw-6, format="%b %d, %Y")
+cases_date_7<- format(cases_date_raw-7, format="%b %d, %Y")
+#get the case and death data current 14 days start date
+cases_date_13<- format(cases_date_raw-13, format="%b %d, %Y")
+#get the case and death data current 14 days end date
+cases_date_14<-format(cases_date_raw-14, format="%b %d, %Y")
+#get the case and death data current 14 days start date
+cases_date_27<-format(cases_date_raw-27, format="%b %d, %Y")
+
+
+#create case data for numbers list, peaks table, and plots
+cases_epicurve <- case_reg_tbl  %>% 
+mutate(
+#weekly cases
+cases_cum7 = (rollsum(cases_new,7,align = "right", fill = NA)) ,
+#prior 7 day avg case
+cases_prior_7avg=lag(cases_avg,order_by = cases_date,7)%>% round(0),
+#14 day avg case
+cases_14avg = rollmean(cases_new,14,align = "right", fill = NA)%>% round(0),
+#piror 14 day avg case
+cases_prior_14avg=lag(cases_14avg,order_by = cases_date,14)%>% round(0),
+#percent change of 14 day avg
+cases_14change  = (cases_14avg - cases_prior_14avg)/cases_prior_14avg
+       ) %>% 
+ungroup() %>%filter(cases_date>as.Date("2020-1-27"))
+#format case numbers data
+cases_numbers<-cases_epicurve%>%filter(cases_date==max(cases_date,na.rm=TRUE))%>%
+mutate(
+#format number
+cases_cum = cases_cum %>% format( big.mark = ","),
+cases_new = cases_new%>%format(justify="right",big.mark=","),
+cases_avg = cases_avg%>%format(justify="right",big.mark=","),
+cases_prior_7avg=label_number(big.mark=",",accuracy=1)(cases_prior_7avg),
+cases_14avg=label_number(big.mark=",",accuracy=1)(cases_14avg),
+cases_cum7=label_number(big.mark=",",accuracy=1)(cases_cum7),
+cases_prior_14avg=label_number(big.mark=",",accuracy=1)(cases_prior_14avg),
+cases_14change=label_percent(decimal.mark=".",accuracy = .1)(cases_14change)
+     )
+
+#define format of numbers list
+numbers_list_format_function<-function(dataset){
+  dataset<-hrule(dataset,rule="exact",part="body")
+  dataset<-height(dataset,i=c(2,3,5,6,8,9,11,12,14),height=0.4)
+  dataset<-height(dataset,i=c(1,4,7,10,13),height=0.5)
+  dataset<-width(dataset,width=3.5)
+  dataset<-fontsize(x=dataset,i=c(1,4,7,10,13),size=24,part="body")
+  dataset<-fontsize(x=dataset,i=c(2,5,8,11,14),size=18,part="body")
+  dataset<-fontsize(x=dataset,i=c(3,6,9,12),size=17,part="body")
+  dataset<-color(x=dataset,i=1,j=1,color="white",part="header")
+  dataset<-color(x=dataset,i=c(1,4),color="orange",part="body")
+  dataset<-color(x=dataset,i=c(7,10,13),color="black",part="body")
+  dataset<-color(x=dataset,i=c(2,3,5,6,8,9,11,12,14),color="#666666",part="body")
+  dataset<-bold(x=dataset,i=1:14,part="body")
+  dataset<-align(x=dataset,align="left",part="body")
+  dataset<-align(x=dataset,i=4,align="left",part="body")
+  dataset<-border_remove(dataset)
+  return (dataset)
+}
+
+#define numbers list function
+case_numbers_list<-function(timeframe){
+if (timeframe=="Daily"){
+case_numbers_list<-data.frame(
+totalnumber=cases_numbers$cases_cum,
+totalname="Total Cases Reported",
+daterange=glue("Jan 23, 2020 - {cases_date}"),
+newnumber=cases_numbers$cases_new,
+newname="New Cases Reported",
+date={cases_date},
+averagenumber=cases_numbers$cases_avg,
+averagename="Current 7-Day Average",
+daterange3=glue("{cases_date_6} - {cases_date}"),
+prioraveragenumber=cases_numbers$cases_prior_7avg,
+prioraveragename="Prior 7-Day Average",
+daterange4=glue("{cases_date_13} - {cases_date_7}"),
+change=cases_numbers$cases_change,
+changename="Change in 7-Day Average")%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+            values_transform = list(val = as.character))%>%select(val)%>%flextable()
+
+return(case_numbers_list)
+  }
+  else if (timeframe=="Weekly"|timeframe=="Monthly"){
+    case_numbers_list<-data.frame(
+totalnumber=cases_numbers$cases_cum,
+totalname="Total Cases Reported",
+daterange=glue("Jan 23, 2020 - {cases_date}"),
+newnumber=cases_numbers$cases_cum7,
+newname="Weekly New Cases Reported",
+daterange2=glue("{cases_date_6} - {cases_date}"),
+averagenumber=cases_numbers$cases_14avg,
+averagename="Current 14-Day Average",
+daterange3=glue("{cases_date_13} - {cases_date}"),
+prioraveragenumber=cases_numbers$cases_prior_14avg,
+prioraveragename="Prior 14-Day Average",
+daterange4=glue("{cases_date_27} - {cases_date_14}"),
+change=cases_numbers$cases_14change,
+changename="Change in 14-Day Average")%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+            values_transform = list(val = as.character))%>%select(val)%>%flextable()
+    
+return(case_numbers_list)
+  }
+}
+#create case numbers list and save the image
+case_numbers_list<-case_numbers_list(params$timeframe)
+case_numbers_list<-numbers_list_format_function(case_numbers_list)
+casenumbersimg<-save_as_image(case_numbers_list,path="../../resources/images/casenumbers.png",webshot="webshot2")
+casenumbersimg<-readPNG("../../resources/images/casenumbers.png")
+casenumbers<-rasterGrob(casenumbersimg)
+
+#define case peaks format function
+casepeaks_format_function<-function(dataset){
+dataset<-add_header_row(x=dataset,top=TRUE,values=c("s"),colwidths=c(7))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("January 22, 2020 - {cases_Bdate}"),colwidths=c(7))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("{params$timeframe} Change in COVID-19 Cases, Region {params$region}"),colwidths=c(7))
+dataset<-fontsize(x=dataset,i=1,size=16,part="header")
+dataset<-fontsize(x=dataset,i=2,size=8,part="header")
+dataset<-color(x=dataset,i=3,color="white",part="header")
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-hrule(dataset,rule="exact",part="header")
+dataset<-width(dataset,j=4,width=0.1)
+dataset<-width(dataset,j=c(3,6),width=1.1)
+dataset<-width(dataset,j=c(1,2,5),width=1.1)
+dataset<-width(dataset,j=7,width=2.0)
+dataset<-height(dataset,part="header",i=1:6,height=0.16)
+dataset<-height(dataset,part="body",height=0.12)
+dataset<-compose(dataset,part="header",i=6,j=1,value=as_paragraph("Peak"))
+dataset<-compose(dataset,part="header",i=6,j=c(3,6),value=as_paragraph("Date"))
+dataset<-compose(dataset,part="header",i=6,j=c(2,5),value=as_paragraph("Cases"))
+dataset<-color(x=dataset,i=6,color="black",part="header")
+dataset<-color(x=dataset,i=5,j=c(1,4),color="white",part="header")
+dataset<-color(x=dataset,i=6,j=4,color="white",part="header")
+dataset<-color(x=dataset,j=4,color="white",part="body")
+dataset<-align(x=dataset,align="center",part="body")
+dataset<-align(x=dataset,align="center",part="header")
+dataset<-bold(x=dataset,i=c(1,4,5,6),part="header")
+dataset<-fontsize(x=dataset,i=4,size=8,part="header")
+dataset<-fontsize(x=dataset,i=5:6,size=6,part="header")
+dataset<-fontsize(x=dataset,size=7,part="body")
+dataset<-border_remove(dataset)
+std_border<-fp_border(color="black")
+dataset<-hline(x=dataset,i=5,j=2:3,border=std_border,part="header")
+dataset<-hline(x=dataset,i=5,j=5:7,border=std_border,part="header")
+small_border<-fp_border(color="grey")
+dataset<-hline(x=dataset,i=6,j=1:7,border=small_border,part="header")
+tiny_border<-fp_border(color="grey",width=0.5)
+dataset<-hline(x=dataset,i=1:6,j=1:7,border=tiny_border,part="body")
+  return (dataset)
+}
+
+#get case weekly epicurve data
+cases_weekly_epicurve <- cases_epicurve%>%filter(wday(cases_date)==wday(cases_date_raw))
+
+#define case peaks function
+case_peaks_list<-function(timeframe){
+if (timeframe=="Daily"){
+    #get current daily cases data
+    case_current_7_average<-cases_epicurve%>%
+        filter(cases_date==max(cases_date,na.rm=TRUE))%>%head(1)%>%pull(cases_avg)
+
+    #define function to get case peak data    
+    case_peak_function<-function(startdate,enddate){
+#filter the date
+peak<-cases_epicurve%>%
+    filter(cases_date>=as.Date(startdate,format("%Y-%m-%d")))%>%
+    filter(cases_date<=as.Date(enddate,format("%Y-%m-%d")))
+#get the maximal daily cases
+peakcases=max(peak$cases_new,na.rm=TRUE)
+#get the date of the maximal daily cases
+peakdate<-peak%>%filter(cases_new==peakcases)%>%
+    mutate(cases_date=min(cases_date,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#get the maximal 7 day avg case
+peak_7_average=max(peak$cases_avg,na.rm=TRUE)
+#get the date of the maximal 7 day avg case
+peak7avgdate<-peak%>%filter(cases_avg==peak_7_average)%>%
+    mutate(cases_date=min(cases_date,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#percent change of the maximal 7 day avg and the current 7 day avg
+peakchange=(case_current_7_average-peak_7_average)/peak_7_average
+#format number
+Cases=label_number(big.mark=",",accuracy=1)(peakcases)
+Week=format(peakdate,format="%d-%b-%y")
+Case=label_number(big.mark=",",accuracy=1)(peak_7_average)
+Date=format(peak7avgdate,format="%d-%b-%y")
+Change=label_percent(decimal.mark = ".",accuracy = .1)(peakchange)
+
+return(data.frame("Cases"=Cases,"Dates"=Week,"1"="1","Case"=Case,"Date"=Date,"Change"=Change))
+                                               } 
+#input peak start date and end date to get data of each peak
+casepeak1<-case_peak_function("2020-03-01","2020-05-31")
+casepeak2<-case_peak_function("2020-06-01","2020-09-30")
+casepeak3<-case_peak_function("2020-02-06","2021-03-30")
+casepeak4<-case_peak_function("2021-04-01","2021-06-30")
+casepeak5<-case_peak_function("2021-07-01","2021-11-30")
+casepeak6<-case_peak_function("2021-12-01","2022-12-31")
+
+#combine each peak and get case peak flextable
+casepeak_raw<-casepeak1%>%rbind(casepeak2)%>%rbind(casepeak3)%>%
+rbind(casepeak4)%>%rbind(casepeak5)%>%rbind(casepeak6)
+casepeak<-(data.frame(c("1st Peak","2nd Peak","3rd Peak","4th Peak","5th Peak","Latest Peak")))%>%
+cbind(casepeak_raw)%>%flextable()
+
+#format case peak flextable 
+casepeak<-add_header_row(x=casepeak,top=TRUE,values=c("s","Single Day","s","7-Day Average"),colwidths=c(1,2,1,3))
+casepeak<-add_header_row(x=casepeak,top=TRUE,values=c("Peaks in Single Day and 7-Day Average of New Cases"),colwidths=c(7))
+casepeak<-compose(casepeak,part="header",i=3,j=7,value=as_paragraph("%Change vs Current Avg"))
+
+  return(casepeak)  
+  }
+  else if(timeframe=="Weekly"|timeframe=="Monthly"){
+#get case current 14 day average data
+case_current_14_average<-cases_weekly_epicurve%>%
+filter(cases_date==max(cases_date,na.rm=TRUE))%>%
+    mutate(cases_14avg=cases_14avg%>%round(0))%>%head(1)%>%pull(cases_14avg)
+
+#define function to get case peak data
+case_peak_function<-function(startdate,enddate){
+#filter the date
+peak<-cases_weekly_epicurve%>%
+filter(cases_date>=as.Date(startdate,format("%Y-%m-%d")))%>%
+filter(cases_date<=as.Date(enddate,format("%Y-%m-%d")))
+#get the maximal weekly cases
+peakcases=max(peak$cases_cum7,na.rm=TRUE)
+#get the date of the maximal weekly cases
+peakdate<-peak%>%filter(cases_cum7==peakcases)%>%
+mutate(cases_date=min(cases_date,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#get the maximal 14 day avg of case
+peak_14_average=max(peak$cases_14avg,na.rm=TRUE)
+#get the date of the maximal 14 day avg of case
+peak14avgdate<-peak%>%filter(cases_14avg==peak_14_average)%>%
+mutate(cases_date=min(cases_date,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#percent change of the maximal 14 day avg of case and current 14 day avg case
+peakchange=(case_current_14_average-peak_14_average)/peak_14_average
+#format numbers
+Case=label_number(big.mark=",",accuracy=1)(peak_14_average)
+Change=label_percent(decimal.mark = ".",accuracy = .1)(peakchange)
+Cases=label_number(big.mark=",",accuracy=1)(peakcases)
+Week=format(peakdate,format="%d-%b-%y")
+Date=format(peak14avgdate,format="%d-%b-%y")
+#create dataframe
+return(data.frame("Cases"=Cases,"Week"=Week,"1"="1","Case"=Case,"Date"=Date,"Change"=Change))
+                                               } 
+#input peak start date and end date to get data of each peak
+casepeak1<-case_peak_function("2020-03-01","2020-05-31")
+casepeak2<-case_peak_function("2020-06-01","2020-09-30")
+casepeak3<-case_peak_function("2020-02-06","2021-03-30")
+casepeak4<-case_peak_function("2021-04-01","2021-06-30")
+casepeak5<-case_peak_function("2021-07-01","2021-11-30")
+casepeak6<-case_peak_function("2021-12-01","2022-12-31")
+
+#combine each peak and get case peak flextable
+casepeak_raw<-casepeak1%>%rbind(casepeak2)%>%rbind(casepeak3)%>%
+    rbind(casepeak4)%>%rbind(casepeak5)%>%rbind(casepeak6)
+casepeak<-(data.frame(c("1st Peak","2nd Peak","3rd Peak","4th Peak","5th Peak","Latest Peak")))%>%cbind(casepeak_raw)%>%flextable()
+
+#format case peak flextable and save the image
+casepeak<-add_header_row(x=casepeak,top=TRUE,values=c("s","Single Week","s","14-Day Average"),colwidths=c(1,2,1,3))
+casepeak<-add_header_row(x=casepeak,top=TRUE,values=c("Peaks in Single Week and 14-Day Average of New Cases"),colwidths=c(7))
+casepeak<-compose(casepeak,part="header",i=3,j=7,value=as_paragraph("%Change vs Current 2 Week Avg"))
+
+return(casepeak)
+  }
+ 
+}
+#create case peaks
+casepeak<-case_peaks_list(params$timeframe)
+#format case peaks
+casepeak<-casepeaks_format_function(casepeak)
+casepeak
+
+ #define case plot function
+ casedaily_weekly_monthly_plot<-function(timeframe){
+   if(timeframe=="Daily"){
+#plot daily cases curve
+caseplot<-ggplot(cases_epicurve,aes(cases_date ))+ 
+#add column of daily cases
+geom_col(aes(y=cases_new,fill=" Daily New Cases"),color ="#573B92") +
+#add 7 day avg case line
+geom_line(aes(y=cases_avg,group=1,color="7-Day Average Case    "),size=1.3)+
+#set color of 7 day avg case line
+scale_color_manual(" ",values="#E1C233")+
+#set color of column
+scale_fill_manual(" ",values="#573B92")+
+#set maximal value of y axis and set the secondary y axis
+scale_y_continuous(limits=c(0,max(cases_epicurve$cases_new)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~.,name="7-Day Average Case",labels = label_number(big.mark = ",")))+
+#set axis title
+labs(x="Submission Date",y="Daily New Cases")+
+#set theme
+theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+     return(caseplot)
+   }
+   else if(timeframe=="Weekly"){
+#plot weekly cases curve
+caseplot<-ggplot(cases_weekly_epicurve,aes(cases_date ))+ 
+#add column of weekly cases
+geom_col(aes(y=cases_cum7,fill=" Weekly New Cases"),color ="#573B92") +
+#add 14 day avg case line
+geom_line(aes(y=cases_14avg*7,group=1,color="14-Day Average Case    "),size=1.3)+
+#set color of 14 day avg case line
+scale_color_manual(" ",values="#E1C233")+
+#set color of column
+scale_fill_manual(" ",values="#573B92")+
+#set the maximal value of y axis and set the secondary y axis
+scale_y_continuous(limits=c(0,max(cases_weekly_epicurve$cases_cum7)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~./7,name="14-Day Average Case",labels = label_number(big.mark = ",")))+
+#set axis title
+labs(x="Week End Date",y="Weekly New Cases")+
+#set theme
+theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+return(caseplot)
+   }
+   else if(timeframe=="Monthly"){
+#get monthly cases data      
+cases_monthly_epicurve <- case_reg_tbl%>%
+group_by(month=lubridate::floor_date(cases_date,'month'))%>%
+mutate(cases_cummonth=sum(cases_new))%>%select(month,cases_cummonth)%>%
+arrange(month)%>%ungroup()%>%unique()
+#plot monthly cases curve
+caseplot<-ggplot(cases_monthly_epicurve,aes(month ))+ 
+#add monthly cases column
+geom_col(aes(y=cases_cummonth,fill=" Monthly New Cases"),color ="#573B92") +
+#set color of column
+scale_fill_manual(" ",values="#573B92")+
+#set the maximal value of y axis and set the secondary y axis
+scale_y_continuous(limits=c(0,max(cases_monthly_epicurve$cases_cummonth)*1.3),labels = label_number(big.mark = ","))+
+#set axis title
+labs(x="Month of Report",y="Monthly New Cases")+
+#set theme
+theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+return(caseplot)
+   }
+ }
+ 
+#create case plot
+caseplot<-casedaily_weekly_monthly_plot(params$timeframe)
+#plot case numbers
+casenumbersplot<-ggplot()+theme_void()+ 
+    annotation_custom(casenumbers,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#plot final case epicurve chart
+casefinalplot<-cowplot::plot_grid(casenumbersplot,caseplot,ncol=2,rel_widths=c(1,3))
+casefinalplot
+```
+
+```{r hospital,warning=FALSE, message=FALSE, echo=FALSE }
+#| tbl-cap: "hospital"
+
+#get hospital dates
+hosp_date_raw <-hosp_reg_tbl%>%arrange(desc(hosp_date))%>%head(1)%>%pull(hosp_date) 
+hosp_Bdate<-format(hosp_date_raw,format="%B %d, %Y")
+hosp_date<-format(hosp_date_raw,format="%b %d, %Y")
+hosp_date_6<-format(hosp_date_raw-6, format="%b %d, %Y")
+hosp_date_7<-format(hosp_date_raw-7, format="%b %d, %Y")
+hosp_date_13<-format(hosp_date_raw-13, format="%b %d, %Y")
+hosp_date_14<-format(hosp_date_raw-14, format="%b %d, %Y")
+hosp_date_27<-format(hosp_date_raw-27, format="%b %d, %Y")
+
+#get hospital data
+hosp_epicurve <- hosp_reg_tbl  %>% filter(hosp_date<=max(hosp_date,na.rm=TRUE)) %>% mutate(
+#weekly admissions
+hosp_cum7 =(rollsum(hosp_new,7,align = "right", fill = NA)) ,
+#prior 7 day avg admission
+hosp_prior_7avg = lag(hosp_avg,order_by = hosp_date, 7),
+#14 day avg admission
+hosp_14avg = rollmean(hosp_new,14,align = "right", fill = NA)%>% round(0),
+#prior 14 day avg admission
+hosp_prior_14avg=lag(hosp_14avg,order_by = hosp_date,14)%>% round(0),
+#percent change of 14 day avg admission
+hosp_14change  = (hosp_14avg - hosp_prior_14avg)/hosp_prior_14avg
+        ) 
+
+ #format hospital data      
+hosp_numbers<-hosp_epicurve %>%filter(hosp_date==max(hosp_date,na.rm=TRUE))%>%
+mutate(
+#format number
+hosp_cum = hosp_cum %>% format(justify = "right",big.mark = ","),
+hosp_cum7 = hosp_cum7 %>% format(justify = "right",big.mark = ","),
+hosp_new = hosp_new%>%format(justify="right",big.mark=","),
+hosp_avg=label_number(big.mark=",",accuracy=1)(hosp_avg),
+hosp_prior_7avg=label_number(big.mark=",",accuracy=1)(hosp_prior_7avg),
+hosp_prior_14avg=label_number(big.mark=",",accuracy=1)(hosp_prior_14avg),
+hosp_14change=label_percent(decimal.mark=".",accuracy = .1)(hosp_14change)
+       )  
+#define hospital number list function
+hosp_numbers_list<-function(timeframe){
+if (timeframe=="Daily"){
+    hosp_numbers_list<-data.frame(
+totalnumber=hosp_numbers$hosp_cum,
+totalname="Total New Admissions",
+daterange=glue("Jan 23, 2020 - {hosp_date}"),
+newnumber=hosp_numbers$hosp_new,
+newname="New Admissions",
+date={hosp_date},
+averagenumber=hosp_numbers$hosp_avg,
+averagename="Current 7-Day Average",
+daterange3=glue("{hosp_date_6} - {hosp_date}"),
+prioraveragenumber=hosp_numbers$hosp_prior_7avg,
+prioraveragename="Prior 7-Day Average",
+daterange4=glue("{hosp_date_13} - {hosp_date_7}"),
+change=hosp_numbers$hosp_change,
+changename="Change in 7-Day Average")%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+   
+    return(hosp_numbers_list)
+  }
+else if (timeframe=="Weekly"|timeframe=="Monthly"){
+    hosp_numbers_list<-data.frame(
+totalnumber=hosp_numbers$hosp_cum,
+totalname="Total New Admissions",
+daterange=glue("Jan 23, 2020 - {hosp_date}"),
+newnumber=hosp_numbers$hosp_cum7,
+newname="Weekly New Admissions Reported",
+daterange2=glue("{hosp_date_6} - {hosp_date}"),
+averagenumber=hosp_numbers$hosp_14avg,
+averagename="Current 14-Day Average",
+daterange3=glue("{hosp_date_13} - {hosp_date}"),
+prioraveragenumber=hosp_numbers$hosp_prior_14avg,
+prioraveragename="Prior 14-Day Average",
+daterange4=glue("{hosp_date_27} - {hosp_date_14}"),
+change=hosp_numbers$hosp_14change,
+changename="Change in 14-Day Average")%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%
+        flextable()
+    
+    return(hosp_numbers_list)
+  }
+}
+#create hospital numbers list
+hosp_numbers_list<-hosp_numbers_list(params$timeframe)
+#format hospital numbers list and save the image
+hosp_numbers_list<-numbers_list_format_function(hosp_numbers_list)
+hospnumbersimg<-save_as_image(hosp_numbers_list,path="../../resources/images/hospnumbers.png",webshot="webshot2")
+hospnumbersimg<-readPNG("../../resources/images/hospnumbers.png")
+hospnumbers<-rasterGrob(hospnumbersimg)
+
+#define hospital peaks format
+hosppeaks_format_function<-function(dataset){
+dataset<-add_header_row(x=dataset,top=TRUE,values=c("s"),colwidths=c(6))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("August 01, 2020 - {hosp_Bdate}"),colwidths=c(6))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("{params$timeframe} Admissions Change of Patients with Confirmed COVID-19, Region {params$region}"),colwidths=c(6))
+dataset<-fontsize(x=dataset,i=1,size=16,part="header")
+dataset<-fontsize(x=dataset,i=2,size=8,part="header")
+dataset<-color(x=dataset,i=3,color="white",part="header")
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-hrule(dataset,rule="exact",part="header")
+dataset<-width(dataset,j=c(2,5),width=2.0)
+dataset<-width(dataset,j=4,width=0.2)
+dataset<-width(dataset,j=c(1,3,6),width=1.0)
+dataset<-height(dataset,part="header",i=1:6,height=0.16)
+dataset<-height(dataset,part="body",height=0.12)
+dataset<-compose(dataset,part="header",i=6,j=1,value=as_paragraph("Peak"))
+dataset<-compose(dataset,part="header",i=6,j=c(2,5),value=as_paragraph("New Admissions"))
+dataset<-compose(dataset,part="header",i=6,j=c(3,6),value=as_paragraph("Date"))
+dataset<-color(x=dataset,i=5,j=c(1,4),color="white",part="header")
+dataset<-color(x=dataset,i=6,j=4,color="white",part="header")
+dataset<-color(x=dataset,j=4,color="white",part="body")
+dataset<-align(x=dataset,align="center",part="body")
+dataset<-align(x=dataset,align="center",part="header")
+dataset<-bold(x=dataset,i=c(1,4,5,6),part="header")
+dataset<-fontsize(x=dataset,i=4,size=10,part="header")
+dataset<-fontsize(x=dataset,i=5:6,size=8,part="header")
+dataset<-fontsize(x=dataset,size=7,part="body")
+dataset<-border_remove(dataset)
+std_border <- fp_border(color="black",width=1.0)
+dataset<-hline(x=dataset,i=5,j=2:3,border=std_border,part="header")
+dataset<-hline(x=dataset,i=5,j=5:6,border=std_border,part="header")
+small_border<-fp_border(color="grey")
+dataset<-hline(x=dataset,i=6,j=1:6,border=small_border,part="header")
+tiny_border<-fp_border(color="grey",width=0.5)
+dataset<-hline(x=dataset,i=1:3,j=1:6,border=tiny_border,part="body")
+  return (dataset)
+}
+
+#create hospital weekly data
+hosp_weekly_epicurve <-hosp_epicurve%>%filter(wday(hosp_date)==wday(hosp_date_raw))
+#define hospital peaks function
+hosp_peaks_list<-function(timeframe){
+  if (timeframe=="Daily"){
+
+#define case peak function    
+hosp_peak_function<-function(startdate,enddate){
+#filter date
+peak<-hosp_epicurve%>%
+    filter(hosp_date>=as.Date(startdate,format("%Y-%m-%d")))%>%
+    filter(hosp_date<=as.Date(enddate,format("%Y-%m-%d")))
+#get the maximal daily admissions
+peakadmissions=max(peak$hosp_new,na.rm=TRUE)
+#get the date of the maximal daily admissions
+peakdate<-peak%>%filter(hosp_new==peakadmissions)%>%
+    mutate(hosp_date=min(hosp_date,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+#get the maximal 7 day avg admission
+peak_7_average=max(peak$hosp_avg,na.rm=TRUE)
+#get the date of the maximal 7 day avg admission
+peak7avgdate<-peak%>%filter(hosp_avg==peak_7_average)%>%
+    mutate(hosp_date=min(hosp_date,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+
+#format number
+Admissions=label_number(big.mark=",",accuracy=1)(peakadmissions)
+Dates=format(peakdate,format="%d-%b-%y")
+Admission=label_number(big.mark=",",accuracy=1)(peak_7_average)
+Date=format(peak7avgdate,format="%d-%b-%y")
+#create dataframe
+return(data.frame("Admissions"=Admissions,"Dates"=Dates,"1"="1","Admission"=Admission,"Date"=Date))
+                                               } 
+#input peak start date and end date to get data of each peak
+hosppeak1<-hosp_peak_function("2021-01-01","2021-06-30")
+hosppeak2<-hosp_peak_function("2021-07-01","2021-10-31")
+hosppeak3<-hosp_peak_function("2021-11-01","2022-08-05")
+#combine each peak and create hospital peak table
+hosppeak_raw<-hosppeak1%>%rbind(hosppeak2)%>%rbind(hosppeak3)
+hosppeak<-data.frame(c("1st Peak","2nd Peak","Latest Peak"))%>%
+    cbind(hosppeak_raw)%>%flextable()
+#format hospital peaks flextable 
+hosppeak<-add_header_row(x=hosppeak,top=TRUE,values=c("S","Single Day","s","7-Day Average"),colwidths=c(1,2,1,2))
+hosppeak<-add_header_row(x=hosppeak,top=TRUE,values=c("Peaks in New Admissions and Highest 7-Day Moving Average"),colwidths=c(6))
+
+  return(hosppeak)  
+  }
+else if(timeframe=="Weekly"|timeframe=="Monthly"){
+
+#define function to get hospital peak data
+hosp_peak_function<-function(startdate,enddate){
+#filter peak range date
+peak<-hosp_weekly_epicurve%>%
+    filter(hosp_date>=as.Date(startdate,format("%Y-%m-%d")))%>%
+    filter(hosp_date<=as.Date(enddate,format("%Y-%m-%d")))
+#get the maximal weely admissions
+peakadmission=max(peak$hosp_cum7,na.rm=TRUE)
+#get the date of the maximal weely admissions
+peakdate<-peak%>%filter(hosp_cum7==peakadmission)%>%
+    mutate(hosp_date=min(hosp_date,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+#get the maximal 14 day avg admission
+peak_14_average=max(peak$hosp_14avg,na.rm=TRUE)
+#get the date of the maximal 14 day avg admission
+peak14avgdate<-peak%>%filter(hosp_14avg==peak_14_average)%>%
+    mutate(hosp_date=min(hosp_date,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+#format number
+Admissions=label_number(big.mark=",",accuracy=1)(peakadmission)
+Dates=format(peakdate,format="%d-%b-%y")
+Admission=label_number(big.mark=",",accuracy=1)(peak_14_average)
+Date=format(peak14avgdate,format="%d-%b-%y")
+#create dataframe
+return(data.frame("Admissions"=Admissions,"Dates"=Dates,"1"="1","Admission"=Admission,"Date"=Date))
+} 
+#input peak start date and end date to get data of each peak
+hosppeak1<-hosp_peak_function("2021-01-01","2021-06-30")
+hosppeak2<-hosp_peak_function("2021-07-01","2021-10-31")
+hosppeak3<-hosp_peak_function("2021-11-01","2022-08-05")
+#create hospital peak table
+hosppeak_raw<-hosppeak1%>%rbind(hosppeak2)%>%rbind(hosppeak3)
+hosppeak<-data.frame(c("1st Peak","2nd Peak","Latest Peak"))%>%
+    cbind(hosppeak_raw)%>%flextable()
+
+#format hospital peaks flextable and save the image
+hosppeak<-add_header_row(x=hosppeak,top=TRUE,values=c("S","Single Week","s","14-Day Average"),colwidths=c(1,2,1,2))
+hosppeak<-add_header_row(x=hosppeak,top=TRUE,values=c("Peaks in New Admissions and Highest 14-Day Moving Average"),colwidths=c(6))
+
+return(hosppeak)
+  }   
+}
+#create hospital peak table
+hosppeak<-hosp_peaks_list(params$timeframe)
+#format hospital peak table
+hosppeak<-hosppeaks_format_function(hosppeak)
+hosppeak
+
+ #define hospital plot function
+ hospdaily_weekly_monthly_plot<-function(timeframe){
+ if(timeframe=="Daily"){
+     hospplot<-ggplot(hosp_epicurve,aes(hosp_date ))+ 
+geom_col(aes(y=hosp_new,fill=" Daily New Admissions"),color ="#F5793A") +
+geom_line(aes(y=hosp_avg,group=1,color="7-Day Average Admission    "),size=1.3)+
+scale_color_manual(" ",values="#12239E")+
+scale_fill_manual(" ",values="#F5793A")+
+scale_y_continuous(limits=c(0,max(hosp_epicurve$hosp_new)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~.,name="7-Day Average Admission",labels = label_number(big.mark = ",")))+
+labs(x="Date of Report",y="Daily New Admissions")+
+      theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+     return(hospplot)
+   }
+ else if(timeframe=="Weekly"){
+hospplot<-ggplot(hosp_weekly_epicurve,aes(hosp_date ))+ 
+geom_col(aes(y=hosp_cum7,fill=" Weekly New Admissions"),color ="#F5793A") +
+geom_line(aes(y=hosp_14avg*7,group=1,color="14-Day Average Admission    "),size=1.3)+
+scale_color_manual(" ",values="#12239E")+
+scale_fill_manual(" ",values="#F5793A")+
+scale_y_continuous(limits=c(0,max(hosp_weekly_epicurve$hosp_cum7)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~./7,name="14-Day Average Admission",labels = label_number(big.mark = ",")))+
+labs(x="Week End Date",y="Weekly New Admissions")+
+      theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+return(hospplot)
+   }
+ else if(timeframe=="Monthly"){
+     hosp_monthly_epicurve <- hosp_reg_tbl%>%
+group_by(month=lubridate::floor_date(hosp_date,'month'))%>%
+mutate(hosp_cummonth=sum(hosp_new))%>%select(month,hosp_cummonth)%>%
+arrange(month)%>%ungroup()%>%unique()
+     hospplot<-ggplot(hosp_monthly_epicurve,aes(month))+ 
+geom_col(aes(y=hosp_cummonth,fill=" Monthly New Admissions"),color ="#F5793A") +
+scale_fill_manual(" ",values="#F5793A")+
+scale_y_continuous(limits=c(0,max(hosp_monthly_epicurve$hosp_cummonth)*1.3),labels = label_number(big.mark = ","))+
+labs(x="Month of Report",y="Monthly New Admissions")+
+       theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+       legend.text = element_text(size = rel(1.1), face = "bold"),
+       legend.key.size = unit(0.9, "lines"),
+       legend.position="top")
+return(hospplot)
+   }
+ }
+ #create hospital plot
+ hospplot<-hospdaily_weekly_monthly_plot(params$timeframe)
+#plot case numbers
+hospnumbersplot<-ggplot()+theme_void()+ 
+    annotation_custom(hospnumbers,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#plot final case epicurve chart
+hospfinalplot<-cowplot::plot_grid(hospnumbersplot,hospplot,ncol=2,rel_widths=c(1,3))
+hospfinalplot
+
+```
+
+```{r death,warning=FALSE, message=FALSE, echo=FALSE}
+#| tbl-cap: "death"
+
+#create death table
+deaths_epicurve <- death_reg_tbl  %>% 
+mutate(deaths_cum7 = (rollsum(deaths_new,7,align = "right", fill = NA)) ,
+       deaths_prior_7avg=lag(deaths_avg,order_by = deaths_date,7)%>% round(0),
+      deaths_14avg = rollmean(deaths_new,14,align = "right", fill = NA)%>% round(0),
+       deaths_prior_14avg=lag(deaths_14avg,order_by = deaths_date,14)%>% round(0),
+       deaths_14change  = (deaths_14avg - deaths_prior_14avg)/deaths_prior_14avg
+       ) %>% 
+ungroup() %>%filter(deaths_date>as.Date("2020-1-27"))
+#format case numbers data
+deaths_numbers<-deaths_epicurve%>%
+    filter(deaths_date==max(deaths_date,na.rm=TRUE))%>%
+mutate(
+deaths_cum = deaths_cum %>% format( big.mark = ","),
+deaths_new = deaths_new%>%format(justify="right",big.mark=","),
+deaths_avg = deaths_avg%>%format(justify="right",big.mark=","),
+deaths_prior_7avg=label_number(big.mark=",",accuracy=1)(deaths_prior_7avg),
+deaths_14avg=label_number(big.mark=",",accuracy=1)(deaths_14avg),
+deaths_cum7=label_number(big.mark=",",accuracy=1)(deaths_cum7),
+deaths_prior_14avg=label_number(big.mark=",",accuracy=1)(deaths_prior_14avg),
+deaths_14change=label_percent(decimal.mark=".",accuracy = .1)(deaths_14change)
+     )
+
+#define death numbers function
+death_numbers_list<-function(timeframe){
+if (timeframe=="Daily"){
+    death_numbers_list<-data.frame(
+totalnumber=deaths_numbers$deaths_cum,
+totalname="Total Deaths Reported",
+daterange=glue("Jan 23, 2020 - {cases_date}"),
+newnumber=deaths_numbers$deaths_new,
+newname="New Deaths Reported",
+date={cases_date},
+averagenumber=deaths_numbers$deaths_avg,
+averagename="Current 7-Day Average",
+daterange3=glue("{cases_date_6} - {cases_date}"),
+prioraveragenumber=deaths_numbers$deaths_prior_7avg,
+prioraveragename="Prior 7-Day Average",
+daterange4=glue("{cases_date_13} - {cases_date_7}"),
+change=deaths_numbers$deaths_change,
+changename="Change in 7-Day Average")%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%
+        select(val)%>%flextable()
+    
+    return(death_numbers_list)
+  }
+  if (timeframe=="Weekly"|timeframe=="Monthly"){
+    death_numbers_list<-data.frame(
+totalnumber=deaths_numbers$deaths_cum,
+totalname="Total Deaths Reported",
+daterange=glue("Jan 23, 2020 - {cases_date}"),
+newnumber=deaths_numbers$deaths_cum7,
+newname="Weekly New Deaths Reported",
+daterange2=glue("{cases_date_6} - {cases_date}"),
+averagenumber=deaths_numbers$deaths_14avg,
+averagename="Current 14-Day Average",
+daterange3=glue("{cases_date_13} - {cases_date}"),
+prioraveragenumber=deaths_numbers$deaths_prior_14avg,
+prioraveragename="Prior 14-Day Average",
+daterange4=glue("{cases_date_27} - {cases_date_14}"),
+change=deaths_numbers$deaths_14change,
+changename="Change in 14-Day Average")%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+    
+    return(death_numbers_list)
+  }
+}
+#create death numbers list
+death_numbers_list<-death_numbers_list(params$timeframe)
+#format death numbers list and save the image
+death_numbers_list<-numbers_list_format_function(death_numbers_list)
+deathnumbersimg<-save_as_image(death_numbers_list,path="../../resources/images/deathnumbers.png",webshot="webshot2")
+deathnumbersimg<-readPNG("../../resources/images/deathnumbers.png")
+deathnumbers<-rasterGrob(deathnumbersimg)
+
+#create death weekly data
+deaths_weekly_epicurve <- deaths_epicurve%>%filter(wday(deaths_date)==wday(cases_date_raw))
+#define death peak format function
+deathpeaks_format_function<-function(dataset){
+dataset<-add_header_row(x=dataset,top=TRUE,values=c("s"),colwidths=c(7))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("January 22, 2020 - {cases_Bdate}"),colwidths=c(7))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("{params$timeframe} Change in COVID-19 Deaths, Region {params$region}"),colwidths=c(7))
+dataset<-fontsize(x=dataset,i=1,size=16,part="header")
+dataset<-fontsize(x=dataset,i=2,size=8,part="header")
+dataset<-color(x=dataset,i=3,color="white",part="header")
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-hrule(dataset,rule="exact",part="header")
+dataset<-width(dataset,j=c(1,2,5),width=1.1)
+dataset<-width(dataset,j=4,width=0.1)
+dataset<-width(dataset,j=c(3,6),width=1.1)
+dataset<-width(dataset,j=7,width=2.0)
+dataset<-height(dataset,part="header",i=1:3,height=0.16)
+dataset<-height(dataset,part="body",height=0.12)
+dataset<-compose(dataset,part="header",i=6,j=1,value=as_paragraph("Peak"))
+dataset<-compose(dataset,part="header",i=6,j=c(3,6),value=as_paragraph("Date"))
+dataset<-compose(dataset,part="header",i=6,j=c(2,5),value=as_paragraph("Deaths"))
+dataset<-color(x=dataset,i=5,j=1,color="white",part="header")
+dataset<-color(x=dataset,i=6,color="black",part="header")
+dataset<-color(x=dataset,i=5,j=c(1,4),color="white",part="header")
+dataset<-color(x=dataset,i=6,j=4,color="white",part="header")
+dataset<-color(x=dataset,j=4,color="white",part="body")
+dataset<-align(x=dataset,align="center",part="body")
+dataset<-align(x=dataset,align="center",part="header")
+dataset<-bold(x=dataset,i=c(1,4,5,6),part="header")
+dataset<-fontsize(x=dataset,i=4,size=8,part="header")
+dataset<-fontsize(x=dataset,i=5:6,size=6,part="header")
+dataset<-fontsize(x=dataset,size=7,part="body")
+dataset<-border_remove(dataset)
+std_border<-fp_border(color="black")
+dataset<-hline(x=dataset,i=5,j=2:3,border=std_border,part="header")
+dataset<-hline(x=dataset,i=5,j=5:7,border=std_border,part="header")
+small_border<-fp_border(color="grey")
+dataset<-hline(x=dataset,i=6,j=1:7,border=small_border,part="header")
+tiny_border<-fp_border(color="grey",width=0.5)
+dataset<-hline(x=dataset,i=1:5,j=1:7,border=tiny_border,part="body")
+return(dataset)
+}
+#define death peak function
+death_peaks_list<-function(timeframe){
+if (timeframe=="Daily"){
+    death_current_7_average<-deaths_epicurve%>%
+    filter(deaths_date==max(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_avg)
+ #define function to get death peak data   
+    death_peak_function<-function(startdate,enddate){
+peak<-deaths_epicurve%>%
+    filter(deaths_date>=as.Date(startdate,format("%Y-%m-%d")))%>%
+    filter(deaths_date<=as.Date(enddate,format("%Y-%m-%d")))
+peakdeaths=max(peak$deaths_new,na.rm=TRUE)
+peakdate<-peak%>%filter(deaths_new==peakdeaths)%>%
+    mutate(deaths_date=min(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+peak_7_average=max(peak$deaths_avg,na.rm=TRUE)
+peak7avgdate<-peak%>%filter(deaths_avg==peak_7_average)%>%
+    mutate(deaths_date=min(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+peakchange=(death_current_7_average-peak_7_average)/peak_7_average
+Deaths=label_number(big.mark=",",accuracy=1)(peakdeaths)
+Dates=format(peakdate,format="%d-%b-%y")
+Death=label_number(big.mark=",",accuracy=1)(peak_7_average)
+Date=format(peak7avgdate,format="%d-%b-%y")
+Change=label_percent(decimal.mark = ".",accuracy = .1)(peakchange)
+
+return(data.frame("Deaths"=Deaths,"Dates"=Dates,"1"="1","Death"=Death,"Date"=Date,"Change"=Change))
+                                               } 
+#input peak start date and end date to get data of each peak
+deathpeak1<-death_peak_function("2020-03-01","2020-06-30")
+deathpeak2<-death_peak_function("2020-07-01","2020-09-30")
+deathpeak3<-death_peak_function("2020-10-01","2021-06-30")
+deathpeak4<-death_peak_function("2021-07-01","2021-11-30")
+deathpeak5<-death_peak_function("2021-12-01","2022-12-31")
+
+#get death peak flextable
+deathpeak_raw<-deathpeak1%>%rbind(deathpeak2)%>%rbind(deathpeak3)%>%rbind(deathpeak4)%>%rbind(deathpeak5)
+deathpeak<-data.frame(c("1st Peak","2nd Peak","3rd Peak","4th Peak","Latest Peak"))%>%cbind(deathpeak_raw)%>%flextable()
+#format death peak flextable 
+deathpeak<-add_header_row(x=deathpeak,top=TRUE,values=c("S","Single Day","S","7-Day Average"),colwidths=c(1,2,1,3))
+deathpeak<-add_header_row(x=deathpeak,top=TRUE,values=c("Peaks in Single Day and 7-Day Average of New Deaths"),colwidths=c(7))
+deathpeak<-compose(deathpeak,part="header",i=3,j=7,value=as_paragraph("%Change vs Current Avg"))
+
+  return(deathpeak)  
+  }
+  else if(timeframe=="Weekly"|timeframe=="Monthly"){
+  
+#get death current 14 day average data
+death_current_14_average<-deaths_weekly_epicurve%>%
+    filter(deaths_date==max(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_14avg)
+
+#define function to get death peak data
+death_peak_function<-function(startdate,enddate){
+peak<-deaths_weekly_epicurve%>%
+    filter(deaths_date>=as.Date(startdate,format("%Y-%m-%d")))%>%
+    filter(deaths_date<=as.Date(enddate,format("%Y-%m-%d")))
+peakdeaths=max(peak$deaths_cum7,na.rm=TRUE)
+peakdate<-peak%>%filter(deaths_cum7==peakdeaths)%>%
+    mutate(deaths_date=min(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+peak_14_average=max(peak$deaths_14avg,na.rm=TRUE)
+peak14avgdate<-peak%>%filter(deaths_14avg==peak_14_average)%>%
+    mutate(deaths_date=min(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+peakchange=(death_current_14_average-peak_14_average)/peak_14_average
+Deaths=label_number(big.mark=",",accuracy=1)(peakdeaths)
+Dates=format(peakdate,format="%d-%b-%y")
+Death=label_number(big.mark=",",accuracy=1)(peak_14_average)
+Date=format(peak14avgdate,format="%d-%b-%y")
+Change=label_percent(decimal.mark = ".",accuracy = .1)(peakchange)
+
+return(data.frame("Deaths"=Deaths,"Dates"=Date,"1"="1","Death"=Death,"Date"=Date,"Change"=Change))
+                                               } 
+#input peak start date and end date to get data of each peak
+deathpeak1<-death_peak_function("2020-03-01","2020-06-30")
+deathpeak2<-death_peak_function("2020-07-01","2020-09-30")
+deathpeak3<-death_peak_function("2020-10-01","2021-06-30")
+deathpeak4<-death_peak_function("2021-07-01","2021-11-30")
+deathpeak5<-death_peak_function("2021-12-01","2022-12-31")
+
+#get death peak flextable
+deathpeak_raw<-deathpeak1%>%rbind(deathpeak2)%>%rbind(deathpeak3)%>%
+    rbind(deathpeak4)%>%rbind(deathpeak5)
+deathpeak<-data.frame(c("1st Peak","2nd Peak","3rd Peak","4th Peak","Latest Peak"))%>%cbind(deathpeak_raw)%>%flextable()
+
+#format death peak flextable 
+deathpeak<-add_header_row(x=deathpeak,top=TRUE,values=c("s","Single Week","s","14-Day Average"),colwidths=c(1,2,1,3))
+deathpeak<-add_header_row(x=deathpeak,top=TRUE,values=c("Peaks in Single Week and 14-Day Average of New Deaths"),colwidths=c(7))
+deathpeak<-compose(deathpeak,part="header",i=3,j=7,value=as_paragraph("%Change vs Current 2 Week Avg"))
+
+return(deathpeak)
+  }
+ 
+}
+#create death peaks
+deathpeak<-death_peaks_list(params$timeframe)
+#format death peaks
+ deathpeak<-deathpeaks_format_function(deathpeak)
+ deathpeak
+
+ #define death plot function
+ deathdaily_weekly_monthly_plot<-function(timeframe){
+   if(timeframe=="Daily"){
+     deathplot<-ggplot(deaths_epicurve,aes(deaths_date ))+ 
+geom_col(aes(y=deaths_new,fill=" Daily New Deaths"),color ="#08519C") +
+geom_line(aes(y=deaths_avg,group=1,color="7-Day Average Death    "),size=1.3)+
+scale_color_manual(" ",values="#E66C37")+
+scale_fill_manual(" ",values="#08519C")+
+scale_y_continuous(limits=c(0,max(deaths_epicurve$deaths_new)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~.,name="7-Day Average Death",labels = label_number(big.mark = ",")))+
+labs(x="Submission Date",y="Daily New Deaths")+
+      theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+     return(deathplot)
+   }
+   else if(timeframe=="Weekly"){
+deathplot<-ggplot(deaths_weekly_epicurve,aes(deaths_date ))+ 
+geom_col(aes(y=deaths_cum7,fill=" Weekly New Deaths"),color ="#08519C") +
+geom_line(aes(y=deaths_14avg*7,group=1,color="14-Day Average Death    "),size=1.3)+
+scale_color_manual(" ",values="#E66C37")+
+scale_fill_manual(" ",values="#08519C")+
+scale_y_continuous(limits=c(0,max(deaths_weekly_epicurve$deaths_cum7)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~./7,name="14-Day Average Death",labels = label_number(big.mark = ",")))+
+labs(x="Week End Date",y="Weekly New Deaths")+
+       theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+return(deathplot)
+   }
+   else if(timeframe=="Monthly"){
+     deaths_monthly_epicurve <- death_reg_tbl%>%
+group_by(month=lubridate::floor_date(deaths_date,'month'))%>%
+mutate(deaths_cummonth=sum(deaths_new))%>%select(month,deaths_cummonth)%>%
+arrange(month)%>%ungroup()%>%unique()
+     deathplot<-ggplot(deaths_monthly_epicurve,aes(month ))+ 
+geom_col(aes(y=deaths_cummonth,fill=" Monthly New Deaths"),color ="#08519C") +
+scale_fill_manual(" ",values="#08519C")+
+scale_y_continuous(limits=c(0,max(deaths_monthly_epicurve$deaths_cummonth)*1.3),labels = label_number(big.mark = ","))+
+labs(x="Month of Report",y="Monthly New Deaths")+
+       theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+return(deathplot)
+   }
+ }
+ #create death plot
+ deathplot<-deathdaily_weekly_monthly_plot(params$timeframe)
+#plot death numbers
+deathnumbersplot<-ggplot()+theme_void()+ 
+    annotation_custom(deathnumbers,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#plot final death epicurve chart
+deathfinalplot<-cowplot::plot_grid(deathnumbersplot,deathplot,ncol=2,rel_widths=c(1,3))
+deathfinalplot
+
+```
+
+```{r lab,warning=FALSE, message=FALSE, echo=FALSE }
+#| tbl-cap: "lab"
+
+#get lab dates
+lab_Bdate<-format(Sys.Date()-3,format="%B %d, %Y")
+lab_date_raw<-Sys.Date()-3
+lab_date<-format(lab_date_raw,format="%b %d, %Y")
+lab_date_4<-format(Sys.Date()-7,format="%b %d, %Y")
+lab_date_10<-format(Sys.Date()-13,format="%b %d, %Y")
+lab_date_11<-format(Sys.Date()-14,format="%b %d, %Y")
+lab_date_17<-format(Sys.Date()-20,format="%b %d, %Y")
+lab_date_18<-format(Sys.Date()-21,format="%b %d, %Y")
+lab_date_31<-format(Sys.Date()-34,format="%b %d, %Y")
+lab_date_6<-format(Sys.Date()-9,format="%b %d, %Y")
+lab_date_7<-format(Sys.Date()-10,format="%b %d, %Y")
+lab_date_13<-format(Sys.Date()-16,format="%b %d, %Y")
+lab_date_14<-format(Sys.Date()-17,format="%b %d, %Y")
+lab_date_27<-format(Sys.Date()-30,format="%b %d, %Y")
+
+ 
+#get lab data
+lab_epicurve <- lab_reg_tbl %>% 
+    filter(testpos_date<=max(testpos_date,na.rm=TRUE)) %>% 
+    filter(testpos_date>=as.Date("2020-03-14",format="%Y-%m-%d"))%>%
+mutate(
+  testvol_cum=gsub(",","",testvol_cum),
+  testvol_avg=gsub(",","",testvol_avg),
+  testpos_avg=gsub("%","",testpos_avg))%>%
+mutate(
+       testvol_cum=as.double(testvol_cum),
+       testvol_avg=as.double(testvol_avg),
+       testpos_avg=as.numeric(testpos_avg)/100,
+       postest=new_test_vol*new_pos/100
+    )%>%
+    mutate(
+testvol_avg_date=testpos_date-4,
+testvol_avg_withlag=lag(testvol_avg,order_by = testpos_date, n = 4),
+testvol_prior_7avg=lag(testvol_avg,order_by = testpos_date,7),
+testvol_14avg=rollmean(new_test_vol,14,align="right", fill = NA),
+testvol_prior_14avg=lag(testvol_14avg,order_by = testpos_date,14),
+testvol_7change=(testvol_avg-testvol_prior_7avg)/testvol_prior_7avg,
+testvol_14change=(testvol_14avg-testvol_prior_14avg)/testvol_prior_14avg,
+test_cum7=rollsum(new_test_vol,7,align="right",fill=NA),
+test_cum14=rollsum(new_test_vol,14,align="right",fill=NA),
+testpos_14avg=rollsum(postest,14,align="right",fill=NA)/rollsum(new_test_vol,14,align="right",fill=NA),
+testpos_prior_7avg=(rollsum(postest,7,align = "right",fill = NA)%>%lag(order_by=testpos_date,n=7))/(rollsum(new_test_vol,7,align = "right",fill = NA)%>%lag(orer_by=testpos_date,7)),
+testpos_prior_14avg=(rollsum(postest,14,align = "right",fill = NA)%>%lag(order_by=testpos_date,n=14))/(rollsum(new_test_vol,14,align = "right",fill = NA)%>%lag(orer_by=testpos_date,14)),
+testpos_14change=(testpos_14avg-testpos_prior_14avg)/testpos_prior_14avg,
+testpos_7difference=100*(testpos_avg-testpos_prior_7avg),
+testpos_14difference=100*(testpos_14avg-testpos_prior_14avg)
+        ) 
+
+ #format lab data      
+lab_numbers<-lab_epicurve %>% filter(testpos_date==max(testpos_date,na.rm=TRUE))%>%
+mutate(
+testvol_cum = testvol_cum %>% format(big.mark   = ","),
+testvol_avg = label_number(big.mark=",",accuracy=1)(testvol_avg),
+testvol_14avg = label_number(big.mark=",",accuracy=1)(testvol_14avg),
+testvol_prior_7avg = label_number(big.mark=",",accuracy=1)(testvol_prior_7avg),
+testvol_prior_14avg = label_number(big.mark=",",accuracy=1)(testvol_prior_14avg),
+testvol_7change=label_percent(decimal.mark=".",accuracy = .1)(testvol_7change),
+testvol_14change=label_percent(decimal.mark=".",accuracy = .1)(testvol_14change),
+testpos_avg=label_percent(decimal.mark=".",accuracy = .1)(testpos_avg),
+testpos_14avg=label_percent(decimal.mark=".",accuracy = .1)(testpos_14avg),
+testpos_prior_7avg=label_percent(decimal.mark=".",accuracy = .1)(testpos_prior_7avg),
+testpos_prior_14avg=label_percent(decimal.mark=".",accuracy = .1)(testpos_prior_14avg),
+testpos_14change=label_percent(decimal.mark=".",accuracy = .1)(testpos_14change),
+testpos_7difference=label_number(accuracy = .01)(testpos_7difference),
+testpos_14difference=label_number(accuracy = .01)(testpos_14difference)
+       )  
+#define lab numbers function
+lab_numbers_list<-function(timeframe){
+if (timeframe=="Daily"){
+    lab_numbers_list<-data.frame(
+totalnumber=lab_numbers$testvol_cum,
+totalname="Total Test volume",
+avg=lab_numbers$testvol_avg,
+avgname="Current 7-Day Avg. Daily Test Volume",
+daterange=glue("{lab_date_10} - {lab_date_4}"),
+prioravg=lab_numbers$testvol_prior_7avg,
+prioravgname="Prior 7-Day Avg. Daily Test volume",
+daterange2=glue("{lab_date_17} - {lab_date_11}"),
+change=lab_numbers$testvol_7change,
+prioraveragename="Percent Change in 7-Day Avg.",
+posavg=lab_numbers$testpos_avg,
+posavgname="Current 7-Day Avg. % Positivity",
+daterange3=glue("{lab_date_6} - {lab_date}"),
+posprioravg=lab_numbers$testpos_prior_7avg,
+priorposavgname="Prior 7-Day Avg. % Positivity",
+daterange4=glue("{lab_date_13} - {lab_date_7}"),
+poschange=lab_numbers$testpos_change,
+poschangename="Percent Change in 7-Day Avg",
+poschangedif=lab_numbers$testpos_7difference,
+poschangedifname="Percentage Point Different in 7-Day Averages")%>%
+pivot_longer(cols=everything(),
+             names_to="names",
+             values_to="val",
+             values_transform=list(val=as.character))%>%select(val)%>%flextable()
+    return(lab_numbers_list)
+  }
+  if (timeframe=="Weekly"|timeframe=="Monthly"){
+     lab_numbers_list<-data.frame(
+totalnumber=lab_numbers$testvol_cum,
+totalname="Total Test volume",
+avg=lab_numbers$testvol_14avg,
+avgname="Current 14-Day Avg. Daily Test Volume",
+daterange=glue("{lab_date_17} - {lab_date_4}"),
+prioravg=lab_numbers$testvol_prior_14avg,
+prioravgname="Prior 14-Day Avg. Daily Test volume",
+daterange2=glue("{lab_date_31} - {lab_date_18}"),
+change=lab_numbers$testvol_14change,
+prioraveragename="Percent Change in 14-Day Avg.",
+posavg=lab_numbers$testpos_14avg,
+posavgname="Current 14-Day Avg. % Positivity",
+daterange3=glue("{lab_date_13} - {lab_date}"),
+posprioravg=lab_numbers$testpos_prior_14avg,
+priorposavgname="Prior 14-Day Avg. % Positivity",
+daterange4=glue("{lab_date_27} - {lab_date_14}"),
+poschange=lab_numbers$testpos_14change,
+poschangename="Percent Change in 14-Day Avg",
+poschangedif=lab_numbers$testpos_14difference,
+poschangedifname="Percentage Point Different in 14-Day Averages")%>%
+pivot_longer(cols=everything(),
+             names_to="names",
+             values_to="val",
+             values_transform=list(val=as.character))%>%select(val)%>%flextable()
+    
+    return(lab_numbers_list)
+  }
+}
+#create lab numbers list
+lab_numbers_list<-lab_numbers_list(params$timeframe)
+#define lab numbers format
+lab_numbers_format<-function(dataset){
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-height(dataset,i=c(2,4,5,7,8,10,12,13,15,16,18,20),height=0.6)
+dataset<-height(dataset,i=c(1,3,6,9,11,14,17,19),height=0.7)
+dataset<-width(dataset,width=8.5)
+dataset<-fontsize(x=dataset,i=c(1,3,6,9,11,14,17,19),size=38,part="body")
+dataset<-fontsize(x=dataset,i=c(2,4,7,10,12,15,18,20),size=30,part="body")
+dataset<-fontsize(x=dataset,i=c(5,8,13,16),size=28,part="body")
+dataset<-color(x=dataset,i=1,j=1,color="white",part="header")
+dataset<-color(x=dataset,i=c(1,3,6,9),color="orange",part="body")
+dataset<-color(x=dataset,i=c(2,4,5,7,8,10,12,13,15,16,18,20),color="#666666",part="body")
+dataset<-bold(x=dataset,i=1:20,part="body")
+dataset<-align(x=dataset,align="left",part="body")
+dataset<-align(x=dataset,i=4,align="left",part="body")
+dataset<-border_remove(dataset)
+
+return(dataset)
+}
+#format lab numbers and save the image
+lab_numbers_list<-lab_numbers_format(lab_numbers_list)
+labnumbersimg<-save_as_image(lab_numbers_list,path="../../resources/images/labnumbers.png",webshot="webshot2")
+labnumbersimg<-readPNG("../../resources/images/labnumbers.png")
+labnumbers<-rasterGrob(labnumbersimg)
+
+#define lab peaks format function
+labpeaks_format_function<-function(dataset){
+ dataset<-add_header_row(x=dataset,top=TRUE,values=c("s"),colwidths=c(15))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("March 01, 2020 - {cases_Bdate}"),colwidths=c(15))
+dataset<-add_header_row(x=dataset,top=TRUE,values=glue("{params$timeframe} SARS-CoV-2 NAAT Percent Positivity and Test Volume, Region {params$region}"),colwidths=c(15))
+dataset<-fontsize(x=dataset,i=1,size=16,part="header")
+dataset<-fontsize(x=dataset,i=2,size=8,part="header")
+dataset<-color(x=dataset,i=3,color="white",part="header")
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-hrule(dataset,rule="exact",part="header")
+dataset<-width(dataset,j=c(2,5),width=0.6)
+dataset<-width(dataset,j=c(4,8,12),width=0.2)
+dataset<-width(dataset,j=c(3,6,10,11,13,14),width=0.6)
+dataset<-width(dataset,j=c(1,9),width=0.6)
+dataset<-width(dataset,j=c(7,15),width=0.6)
+dataset<-height(dataset,part="header",i=4:5,height=0.12)
+dataset<-height(dataset,part="header",i=6,height=0.4)
+dataset<-height(dataset,part="body",height=0.10)
+dataset<-compose(dataset,part="header",i=6,j=c(1,9),value=as_paragraph("Peak"))
+dataset<-compose(dataset,part="header",i=6,j=c(2,5),value=as_paragraph("% Positivity"))
+dataset<-compose(dataset,part="header",i=6,j=c(3,6,11,14),value=as_paragraph("Date"))
+dataset<-compose(dataset,part="header",i=6,j=c(10,13),value=as_paragraph("Test Vol"))
+dataset<-compose(dataset,part="body",i=1,j=c(1,9),value=as_paragraph("1st Peak"))
+dataset<-compose(dataset,part="body",i=2,j=c(1,9),value=as_paragraph("2nd Peak"))
+dataset<-compose(dataset,part="body",i=3,j=c(1,9),value=as_paragraph("3rd Peak"))
+dataset<-compose(dataset,part="body",i=4,j=c(1,9),value=as_paragraph("Latest Peak"))
+dataset<-color(x=dataset,i=4,j=8,color="white",part="header")
+dataset<-color(x=dataset,i=5,j=c(1,4,8,9,12),color="white",part="header")
+dataset<-color(x=dataset,i=6,j=c(4,8,12),color="white",part="header")
+dataset<-color(x=dataset,i=6,j=c(1,2,3,5,6,7,9,10,11),color="black",part="header")
+dataset<-color(x=dataset,j=c(4,8,12),color="white",part="body")
+dataset<-align(x=dataset,align="center",part="body")
+dataset<-align(x=dataset,align="center",part="header")
+dataset<-bold(x=dataset,i=c(1,4,5,6),part="header")
+dataset<-fontsize(x=dataset,i=4,size=8,part="header")
+dataset<-fontsize(x=dataset,i=5,size=7,part="header")
+dataset<-fontsize(x=dataset,i=6,size=6,part="header")
+dataset<-fontsize(x=dataset,size=6,part="body")
+dataset<-border_remove(dataset)
+std_border=fp_border(color="black")
+dataset<-hline(x=dataset,i=5,j=2:3,border=std_border,part="header")
+dataset<-hline(x=dataset,i=5,j=5:7,border=std_border,part="header")
+dataset<-hline(x=dataset,i=5,j=10:11,border=std_border,part="header")
+dataset<-hline(x=dataset,i=5,j=13:15,border=std_border,part="header")
+dataset<-hline(x=dataset,i=4,j=1:7,border=std_border,part="header")
+dataset<-hline(x=dataset,i=4,j=9:15,border=std_border,part="header")
+small_border<-fp_border(color="grey")
+dataset<-hline(x=dataset,i=6,j=1:7,border=small_border,part="header")
+dataset<-hline(x=dataset,i=6,j=9:15,border=small_border,part="header")
+tiny_border<-fp_border(color="grey",width=0.5)
+dataset<-hline(x=dataset,i=1:4,j=1:7,border=tiny_border,part="body")
+dataset<-hline(x=dataset,i=1:4,j=9:15,border=tiny_border,part="body")
+  return (dataset)
+}
+
+ 
+#get lab weekly data
+lab_weekly_epicurve <- lab_epicurve%>%filter(wday(testpos_date)==wday(lab_date_raw))
+lab_current_7_average<-lab_epicurve%>%filter(testpos_date==max(testpos_date,na.rm=TRUE))
+lab_current_14_average<-lab_weekly_epicurve%>%filter(testpos_date==max(testpos_date,na.rm=TRUE))
+
+#define lab peaks function
+lab_peaks_list<-function(timeframe){
+if (timeframe=="Daily"){
+ lab_current_7_average<-lab_epicurve%>%filter(testpos_date==max(testpos_date,na.rm=TRUE))   
+    lab_peak_function<-function(startdate,enddate){
+peak<-lab_epicurve%>%
+    filter(testpos_date>=as.Date(startdate,format("%Y-%m-%d")))%>%
+    filter(testpos_date<=as.Date(enddate,format("%Y-%m-%d")))
+peakpos=max(peak$new_pos,na.rm=TRUE)
+peakposdate<-peak%>%filter(new_pos==peakpos)%>%
+    mutate(testpos_date=min(testpos_date,na.rm=TRUE))%>%head(1)%>%pull(testpos_date)
+peakposavg=max(peak$testpos_avg,na.rm=TRUE)
+peakposavgdate<-peak%>%filter(testpos_avg==peakposavg)%>%
+    mutate(testpos_date=min(testpos_date,na.rm=TRUE))%>%head(1)%>%pull(testpos_date)
+peakposchange=(lab_current_7_average$testpos_avg-peakposavg)/peakposavg
+peaktestvol=max(peak$new_test_vol,na.rm=TRUE)
+peaktestvoldate<-peak%>%filter(new_test_vol==peaktestvol)%>%
+    mutate(testpos_date=min(testpos_date))%>%head(1)%>%pull(testpos_date)
+peaktestvolavg=max(peak$testvol_avg,na.rm=TRUE)
+peaktestvolavgdate<-peak%>%filter(testvol_avg==peaktestvolavg)%>%
+    mutate(testvol_avg_date=min(testvol_avg_date,na.rm=TRUE))%>%head(1)%>%pull(testvol_avg_date)
+peaktestvolchange=(lab_current_7_average$testvol_avg-peaktestvolavg)/peaktestvolavg
+pos=label_percent(decimal.mark = ".",accuracy = .1)(peakpos/100)
+posdate=format(peakposdate,format="%b-%d-%y")
+posavg=label_percent(decimal.mark = ".",accuracy = .1)(peakposavg)
+posavgdate=format(peakposavgdate,format="%b-%d-%y")
+poschange=label_percent(decimal.mark = ".",accuracy = .1)(peakposchange)
+testvol=label_number(big.mark=",",accuracy=1)(peaktestvol)
+testvoldate=format(peaktestvoldate,format="%b-%d-%y")
+testvolavg=label_number(big.mark=",",accuracy=1)(peaktestvolavg)
+testvolavgdate=format(peaktestvolavgdate,format="%b-%d-%y")
+testvolchange=label_percent(decimal.mark = ".",accuracy = .1)(peaktestvolchange)
+return(data.frame("Peak"="Peak","Positivity"=pos,"Date"=posdate,"1"="1","Positivity"=posavg,"Date"=posavgdate,"Change vs. Current 7-Day Average"=poschange,"2"="2","Peak"="Peak","Test Vol"=testvol,"Date"=testvoldate,"3"="3","Test Vol"=testvolavg,"Date"=testvolavgdate,"%Change vs Current 2 Week Avg"=testvolchange))
+}
+#get each lab peak
+labpeak1<-lab_peak_function("2020-06-01","2020-09-01")
+labpeak2<-lab_peak_function("2020-09-01","2021-01-31")
+labpeak3<-lab_peak_function("2021-04-01","2021-05-31")
+labpeak4<-lab_peak_function("2021-07-01","2022-02-28")
+labpeak<-labpeak1%>%rbind(labpeak2)%>%rbind(labpeak3)%>%rbind(labpeak4)%>%flextable()
+
+#format lab peaks flextable 
+labpeak<-add_header_row(x=labpeak,top=TRUE,values=c("S","Single Day","s","7-Day Average","s","Single Day","s","7-Day Average"),colwidths=c(1,2,1,3,2,2,1,3))
+labpeak<-add_header_row(x=labpeak,top=TRUE,values=c("Peaks in Single Day and 7-Day Average Percent Positivity","s","Peaks in Single Day and 7-Day Average Test Volume"),colwidths=c(7,1,7))
+labpeak<-compose(labpeak,part="header",i=3,j=c(7,15),value=as_paragraph("%Change vs Current 7-Day Avg"))
+
+  return(labpeak)  
+  }
+else if(timeframe=="Weekly"|timeframe=="Monthly"){
+  
+#define function to get lab peak data
+lab_peak_function<-function(startdate,enddate){
+peak<-lab_weekly_epicurve%>%filter(testpos_date>=as.Date(startdate,format("%Y-%m-%d")))%>%filter(testpos_date<=as.Date(enddate,format("%Y-%m-%d")))
+peakpos=max(peak$testpos_avg,na.rm=TRUE)
+peakposdate<-peak%>%filter(testpos_avg==peakpos)%>%
+    mutate(testpos_date=min(testpos_dat,na.rm=TRUE))%>%head(1)%>%pull(testpos_date)
+peakposavg=max(peak$testpos_14avg,na.rm=TRUE)
+peakposavgdate<-peak%>%filter(testpos_14avg==peakposavg)%>%
+    mutate(testpos_date=min(testpos_date,na.rm=TRUE))%>%head(1)%>%pull(testpos_date)
+peakposchange=(lab_current_14_average$testpos_14avg-peakposavg)/peakposavg
+peaktestvol=max(peak$test_cum7,na.rm=TRUE)
+peaktestvoldate<-peak%>%filter(test_cum7==peaktestvol)%>%
+    mutate(testpos_date=min(testpos_date,na.rm=TRUE)%>%head(1)%>%pull(testpos_date))
+peaktestvolavg=max(peak$testvol_14avg,na.rm=TRUE)
+peaktestvolavgdate<-peak%>%filter(testvol_14avg==peaktestvolavg)%>%
+    mutate(testvol_avg_date=min(testvol_avg_date,na.rm=TRUE))%>%head(1)%>%pull(testvol_avg_date)
+peaktestvolchange=(lab_current_14_average$testvol_14avg-peaktestvolavg)/peaktestvolavg
+pos=label_percent(decimal.mark = ".",accuracy = .1)(peakpos)
+posdate=format(peakposdate,format="%b-%d-%y")
+posavg=label_percent(decimal.mark = ".",accuracy = .1)(peakposavg)
+posavgdate=format(peakposavgdate,format="%b-%d-%y")
+poschange=label_percent(decimal.mark = ".",accuracy = .1)(peakposchange)
+testvol=label_number(big.mark=",",accuracy=1)(peaktestvol)
+testvoldate=format(peaktestvoldate,format="%b-%d-%y")
+testvolavg=label_number(big.mark=",",accuracy=1)(peaktestvolavg)
+testvolavgdate=format(peaktestvolavgdate,format="%b-%d-%y")
+testvolchange=label_percent(decimal.mark = ".",accuracy = .1)(peaktestvolchange)
+
+return(data.frame("Peak"="Peak","Positivity"=pos,"Date"=posdate,"1"="1","Positivity"=posavg,"Date"=posavgdate,"Change vs. Current 14-Day Average"=poschange,"2"="2","Peak"="Peak","Test Vol"=testvol,"Date"=testvoldate,"3"="3","Test Vol"=testvolavg,"Date"=testvolavgdate,"Change vs. Current 14-Day Average"=testvolchange))
+}
+
+
+#get each lab peak
+labpeak1<-lab_peak_function("2020-06-01","2020-09-01")
+labpeak2<-lab_peak_function("2020-09-01","2021-01-31")
+labpeak3<-lab_peak_function("2021-04-01","2021-05-31")
+labpeak4<-lab_peak_function("2021-07-01","2022-02-28")
+labpeak<-labpeak1%>%rbind(labpeak2)%>%rbind(labpeak3)%>%rbind(labpeak4)%>%flextable()
+
+#format lab peaks flextable 
+labpeak<-add_header_row(x=labpeak,top=TRUE,values=c("S","Single Week","s","14-Day Average","s","Single Week","s","14-Day Average"),colwidths=c(1,2,1,3,2,2,1,3))
+labpeak<-add_header_row(x=labpeak,top=TRUE,values=c("Peaks in Single Week and 14-Day Average Percent Positivity","s","Peaks in Single Week and 14-Day Average Test Volume"),colwidths=c(7,1,7))
+labpeak<-compose(labpeak,part="header",i=3,j=c(7,15),value=as_paragraph("%Change vs Current 2 Week Avg"))
+
+  return(labpeak)  
+  }   
+}
+#create lab peak
+labpeak<-lab_peaks_list(params$timeframe)
+#format lab peak
+labpeak<-labpeaks_format_function(labpeak)
+labpeak
+
+#define lab plot function
+labdaily_weekly_monthly_plot<-function(timeframe){
+   if(timeframe=="Daily"){
+dailytestvolumemax<-max(lab_epicurve$new_test_vol,na.rm=TRUE)
+dailytestposmax<-max(lab_epicurve$testpos_avg,na.rm=TRUE)
+dailyyaxisratio<-dailytestvolumemax/dailytestposmax
+
+     labplot<-ggplot(lab_epicurve,aes(testpos_date )) +
+geom_col(aes(y=new_test_vol,fill = " Daily New Test Volume"),color="#E1BE6A") +
+geom_line(aes(y=testvol_avg, x=testvol_avg_date,color = "7-Day Avg Daily Test Volume       ", group=1),size=1.3)+
+geom_line(aes(y=testpos_avg*dailyyaxisratio, color = "7-Day Avg. Percent Positivity",group=1),size=1)+
+scale_fill_manual("",values="#E1BE6A")+
+scale_color_manual(" ",values=c("7-Day Avg Daily Test Volume       "="#666666","7-Day Avg. Percent Positivity"="#40B0A6"))+
+scale_y_continuous(limits=c(0,max(lab_epicurve$new_test_vol)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~./dailyyaxisratio,name="7-Day Avg. Percent Positivity",labels = label_percent(decimal.mark=".",accuracy = 1)))+
+labs(y = "Daily New Test Volume",x = "Date of Report",color="Legend")+
+theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+     return(labplot)
+   }
+   else if(timeframe=="Weekly"){
+weeklytestvolumemax<-max(lab_weekly_epicurve$test_cum7,na.rm=TRUE)
+weeklytestposmax<-max(lab_weekly_epicurve$testpos_14avg,na.rm=TRUE)
+weeklyyaxisratio<-weeklytestvolumemax/weeklytestposmax
+
+labplot<-ggplot(lab_weekly_epicurve,aes(testpos_date ))+ 
+geom_col(aes(y=test_cum7,fill = " Weekly New Test Volume"),color="#E1BE6A") +
+geom_line(aes(y=testvol_14avg*7, x=testvol_avg_date,color = "14-Day Avg Test Volume   ", group=1),size=1.3)+
+geom_line(aes(y=testpos_14avg*weeklyyaxisratio, color = "14-Day Avg. Percent Positivity  ",group=1),size=1)+
+scale_fill_manual("",values="#E1BE6A")+
+scale_color_manual(" ",values=c("14-Day Avg Test Volume   "="#666666","14-Day Avg. Percent Positivity  "="#40B0A6"))+
+scale_y_continuous(limits=c(0,max(lab_weekly_epicurve$test_cum7)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~./weeklyyaxisratio,name="14-Day Avg. Percent Positivity",labels = label_percent(decimal.mark=".",accuracy = 1)))+
+labs(y = "Weekly New Test Volume",x = "Week End Date",color="Legend")+
+theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+     return(labplot)
+   }
+   else if(timeframe=="Monthly"){
+     lab_monthly_epicurve <- lab_epicurve%>%
+    group_by(month=lubridate::floor_date(testpos_date,'month'))%>%
+mutate(lab_cummonth=sum(new_test_vol),
+       testpos_30avg=sum(postest)/sum(new_test_vol)                                         )%>%
+select(month,lab_cummonth,testpos_30avg)%>%arrange(month)%>%unique()
+ 
+monthlytestvolumemax<-max(lab_monthly_epicurve$lab_cummonth,na.rm=TRUE)
+monthlytestposmax<-max(lab_monthly_epicurve$testpos_30avg,na.rm=TRUE)      
+monthlyyaxisratio<-monthlytestvolumemax/monthlytestposmax
+
+labplot<-ggplot(lab_monthly_epicurve,aes(month))+ 
+geom_col(aes(y=lab_cummonth,fill = " Monthly New Test Volume"),color="#E1BE6A") +
+geom_line(aes(y=testpos_30avg*monthlyyaxisratio, color = "30-Day Avg. Percent Positivity    ",group=1),size=1)+
+scale_fill_manual("",values="#E1BE6A")+
+scale_color_manual(" ",values="#40B0A6")+
+scale_y_continuous(limits=c(0,max(lab_monthly_epicurve$lab_cummonth)*1.3),labels = label_number(big.mark = ","),sec.axis=sec_axis(~./monthlyyaxisratio,name="30-Day Avg. Percent Positivity",labels = label_percent(decimal.mark=".",accuracy = 1)))+
+labs(y = "Monthly New Test Volume",x = "Month of Report",color="Legend")+
+theme(axis.title = element_text(size = rel(1.1),face="bold"),
+      axis.text = element_text(size = rel(1.1)),
+      axis.line = element_line(color = "black"),
+      # La légende set the format of the legend
+      legend.text = element_text(size = rel(1.1), face = "bold"),
+      legend.key.size = unit(0.9, "lines"),
+      legend.position="top")
+     return(labplot)
+   }
+}
+#create lab plot
+ labplot<-labdaily_weekly_monthly_plot(params$timeframe)
+#plot lab numbers
+labnumbersplot<-ggplot()+theme_void()+ 
+    annotation_custom(labnumbers,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#plot final lab epicurve chart
+labfinalplot<-cowplot::plot_grid(labnumbersplot,labplot,ncol=2,rel_widths=c(1,3))
+labfinalplot
+
+
+```
+
+```{r vaccine_summary}
+#| tbl-cap: "vaccine_summary"
+
+juris <- list("AL","AK","AZ","AR","CA","CO","CT",
+                      "DE","FL","GA","HI","ID","IL","IN","IA","KS",
+                      "KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM",
+                      "NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT",
+                      "VT","VA","WA","WV","WI","WY","AS","CNMI","DC","FSM","GU","RMI","PW","PR",
+                      "USVI")
+#get vaccine data  
+vax_summary_agg<-read_excel(paste0("C:/Users/",username,"/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/POWER BI/Data/vaccinations/COVID-TRACKER-AGGREGATES 2022.xlsx"), sheet = "Summary",skip = 1)%>%
+              select(LongName,
+                     Location,
+                     Distributed,
+                     Dist_Per_100K,
+                     Administered,
+                     Admin_Per_100K,
+                     Administered_Dose1,
+                     Administered_Dose1_Pop_Pct,
+                     Series_Complete_Yes,
+                     Series_Complete_Pop_Pct)
+#filter out not jurisditions
+vax_summary_all<-vax_summary_agg%>%filter(!(Location=="BP2")&!(Location=="DD2")&!(Location=="DS2")&!(Location=="IH2")&!(Location=="VA2")&!(Location=="US"))
+
+#filter out territories
+vax_summary_state_raw<-vax_summary_agg%>%             filter(!(Location=="AS")&!(Location=="BP2")&!(Location=="CNMI")&!(Location=="DC")&!(Location=="DD2")&!(Location=="DS2")&!(Location=="FM")&!(Location=="GU")&!(Location=="IH2")&!(Location=="MH")&!(Location=="MP")&!(Location=="CNMI")&!(Location=="PR")&!(Location=="PW")&!(Location=="US")&!(Location=="VA2")&!(Location=="VI")&!(Location=="CNMI"))%>%
+select(-Location)
+#sort states
+vax_summary_state<-vax_summary_state_raw[order(vax_summary_state_raw$LongName),]
+#filter to get the vaccine date of each territory
+vax_summary_AS<-vax_summary_agg%>%filter(Location=="AS")%>%select(-Location)
+vax_summary_MP<-vax_summary_agg%>%filter(Location=="MP")%>%select(-Location)
+vax_summary_DC<-vax_summary_agg%>%filter(Location=="DC")%>%select(-Location)
+vax_summary_FM<-vax_summary_agg%>%filter(Location=="FM")%>%select(-Location)
+vax_summary_GU<-vax_summary_agg%>%filter(Location=="GU")%>%select(-Location)
+vax_summary_MH<-vax_summary_agg%>%filter(Location=="MH")%>%select(-Location)
+vax_summary_PW<-vax_summary_agg%>%filter(Location=="PW")%>%select(-Location)
+vax_summary_PR<-vax_summary_agg%>%filter(Location=="PR")%>%select(-Location)
+vax_summary_VI<-vax_summary_agg%>%filter(Location=="VI")%>%select(-Location)
+
+#get the sum for all the states and territories
+vax_summary_all_sum<-vax_summary_all%>%
+    summarise(distributed_sum=sum(Distributed),
+              administered_sum=sum(Administered),
+              administered_dose1_sum=sum(Administered_Dose1),
+              series_complete_yes_sum=sum(Series_Complete_Yes)
+              )
+#get the vaccine data for USA
+vax_summary_US<-vax_summary_agg%>%filter(Location=="US")%>%select(-Location)
+#get the vaccine data for unspecified
+vax_summary_specified<-data.frame(
+    LongName="Unspecified",
+    Distributed=vax_summary_US$Distributed-vax_summary_all_sum$distributed_sum,
+    Dist_Per_100K=NA,
+    Administered=vax_summary_US$Administered-vax_summary_all_sum$administered_sum,
+    Admin_Per_100K=NA,
+    Administered_Dose1=vax_summary_US$Administered_Dose1-vax_summary_all_sum$administered_dose1_sum,
+    Administered_Dose1_Pop_Pct=NA,
+    Series_Complete_Yes=vax_summary_US$Series_Complete_Yes-vax_summary_all_sum$series_complete_yes_sum,
+    Series_Complete_Pop_Pct=NA)
+
+#union the vaccine data of all the states, all the territories, unspecified, and the USA
+vax_summary<-vax_summary_state%>%bind_rows(vax_summary_AS)%>%bind_rows(vax_summary_MP)%>%
+    bind_rows(vax_summary_DC)%>%bind_rows(vax_summary_FM)%>%bind_rows(vax_summary_GU)%>%
+    bind_rows(vax_summary_MH)%>%bind_rows(vax_summary_PW)%>%bind_rows(vax_summary_PR)%>%
+    bind_rows(vax_summary_VI)%>%bind_rows(vax_summary_specified)%>%bind_rows(vax_summary_US)
+
+#get different levels of the column Dist_Per_100K, Admin_Per_100K, Administered_Dose1_Pop_Pct, and Series_Complete_Pop_Pct
+dist_per_100K_50=(min(vax_summary_all$Dist_Per_100K)+max(vax_summary_all$Dist_Per_100K))/2
+dist_per_100K_60=6*(max(vax_summary_all$Dist_Per_100K)+min(vax_summary_all$Dist_Per_100K))/10
+dist_per_100K_70=7*(max(vax_summary_all$Dist_Per_100K)+min(vax_summary_all$Dist_Per_100K))/10
+dist_per_100K_80=8*(max(vax_summary_all$Dist_Per_100K)+min(vax_summary_all$Dist_Per_100K))/10
+dist_per_100K_90=9*(max(vax_summary_all$Dist_Per_100K)+min(vax_summary_all$Dist_Per_100K))/10
+admin_per_100K_50=(max(vax_summary_all$Admin_Per_100K)+min(vax_summary_all$Admin_Per_100K))/2
+admin_per_100K_60=6*(max(vax_summary_all$Admin_Per_100K)+min(vax_summary_all$Admin_Per_100K))/10
+admin_per_100K_70=7*(max(vax_summary_all$Admin_Per_100K)+min(vax_summary_all$Admin_Per_100K))/10
+admin_per_100K_80=8*(max(vax_summary_all$Admin_Per_100K)+min(vax_summary_all$Admin_Per_100K))/10
+admin_per_100K_90=9*(max(vax_summary_all$Admin_Per_100K)+min(vax_summary_all$Admin_Per_100K))/10
+administered_dose1_pop_pct_50=(max(vax_summary_all$Administered_Dose1_Pop_Pct)+
+                                   min(vax_summary_all$Administered_Dose1_Pop_Pct))/2
+administered_dose1_pop_pct_60=6*(max(vax_summary_all$Administered_Dose1_Pop_Pct)+
+                                     min(vax_summary_all$Administered_Dose1_Pop_Pct))/10
+administered_dose1_pop_pct_70=7*(max(vax_summary_all$Administered_Dose1_Pop_Pct)+
+                                     min(vax_summary_all$Administered_Dose1_Pop_Pct))/10
+administered_dose1_pop_pct_80=8*(max(vax_summary_all$Administered_Dose1_Pop_Pct)+
+                                     min(vax_summary_all$Administered_Dose1_Pop_Pct))/10
+administered_dose1_pop_pct_90=9*(max(vax_summary_all$Administered_Dose1_Pop_Pct)+
+                                     min(vax_summary_all$Administered_Dose1_Pop_Pct))/10
+series_complete_pop_pct_50=(max(vax_summary_all$Series_Complete_Pop_Pct)+
+                                min(vax_summary_all$Series_Complete_Pop_Pct))/2
+series_complete_pop_pct_60=6*(max(vax_summary_all$Series_Complete_Pop_Pct)+
+                                  min(vax_summary_all$Series_Complete_Pop_Pct))/10
+series_complete_pop_pct_70=7*(max(vax_summary_all$Series_Complete_Pop_Pct)+
+                                  min(vax_summary_all$Series_Complete_Pop_Pct))/10
+series_complete_pop_pct_80=8*(max(vax_summary_all$Series_Complete_Pop_Pct)+
+                                  min(vax_summary_all$Series_Complete_Pop_Pct))/10
+series_complete_pop_pct_90=9*(max(vax_summary_all$Series_Complete_Pop_Pct)+
+                                  min(vax_summary_all$Series_Complete_Pop_Pct))/10
+
+#get flextable of the vaccine data
+vax_summary<-vax_summary%>%flextable()
+
+#format the table
+#set width and height
+vax_summary<-width(vax_summary,j=1,width=1.3)
+vax_summary<-width(vax_summary,j=2:9,width=0.9)
+vax_summary<-hrule(vax_summary,rule="exact",part="body")
+vax_summary<-height(vax_summary,i=1:61,height=0.20)
+
+#set background color of column 3, 5, 7, and 9 according to their value
+vax_summary<-bg(vax_summary,~Dist_Per_100K>dist_per_100K_50,~Dist_Per_100K,bg="#cefad0",part="body")
+vax_summary<-bg(vax_summary,~Dist_Per_100K>dist_per_100K_60,~Dist_Per_100K,bg="#83f28f",part="body")
+vax_summary<-bg(vax_summary,~Dist_Per_100K>dist_per_100K_70,~Dist_Per_100K,bg="#39e75f",part="body")
+vax_summary<-bg(vax_summary,~Dist_Per_100K>dist_per_100K_80,~Dist_Per_100K,bg="#00c04b",part="body")
+vax_summary<-bg(vax_summary,~Dist_Per_100K>dist_per_100K_90,~Dist_Per_100K,bg="#008631",part="body")
+vax_summary<-bg(vax_summary,~Admin_Per_100K>admin_per_100K_50,~Admin_Per_100K,bg="#cefad0",part="body")
+vax_summary<-bg(vax_summary,~Admin_Per_100K>admin_per_100K_60,~Admin_Per_100K,bg="#83f28f",part="body")
+vax_summary<-bg(vax_summary,~Admin_Per_100K>admin_per_100K_70,~Admin_Per_100K,bg="#39e75f",part="body")
+vax_summary<-bg(vax_summary,~Admin_Per_100K>admin_per_100K_80,~Admin_Per_100K,bg="#00c04b",part="body")
+vax_summary<-bg(vax_summary,~Admin_Per_100K>admin_per_100K_90,~Admin_Per_100K,bg="#008631",part="body")
+vax_summary<-bg(vax_summary,~Administered_Dose1_Pop_Pct>administered_dose1_pop_pct_50,~Administered_Dose1_Pop_Pct,bg="#cefad0",part="body")
+vax_summary<-bg(vax_summary,~Administered_Dose1_Pop_Pct>administered_dose1_pop_pct_60,~Administered_Dose1_Pop_Pct,bg="#83f28f",part="body")
+vax_summary<-bg(vax_summary,~Administered_Dose1_Pop_Pct>administered_dose1_pop_pct_70,~Administered_Dose1_Pop_Pct,bg="#39e75f",part="body")
+vax_summary<-bg(vax_summary,~Administered_Dose1_Pop_Pct>administered_dose1_pop_pct_80,~Administered_Dose1_Pop_Pct,bg="#00c04b",part="body")
+vax_summary<-bg(vax_summary,~Administered_Dose1_Pop_Pct>administered_dose1_pop_pct_90,~Administered_Dose1_Pop_Pct,bg="#008631",part="body")
+vax_summary<-bg(vax_summary,~Series_Complete_Pop_Pct>series_complete_pop_pct_50,~Series_Complete_Pop_Pct,bg="#cefad0",part="body")
+vax_summary<-bg(vax_summary,~Series_Complete_Pop_Pct>series_complete_pop_pct_60,~Series_Complete_Pop_Pct,bg="#83f28f",part="body")
+vax_summary<-bg(vax_summary,~Series_Complete_Pop_Pct>series_complete_pop_pct_70,~Series_Complete_Pop_Pct,bg="#39e75f",part="body")
+vax_summary<-bg(vax_summary,~Series_Complete_Pop_Pct>series_complete_pop_pct_80,~Series_Complete_Pop_Pct,bg="#00c04b",part="body")
+vax_summary<-bg(vax_summary,~Series_Complete_Pop_Pct>series_complete_pop_pct_90,~Series_Complete_Pop_Pct,bg="#008631",part="body")
+#rename column names and row names
+vax_summary<-compose(vax_summary,part="header",i=1,j=1,value=as_paragraph("State/Territory"))
+vax_summary<-compose(vax_summary,part="header",i=1,j=c(2,4,6,8),value=as_paragraph("Total"))
+vax_summary<-compose(vax_summary,part="header",i=1,j=c(3,5),value=as_paragraph("Rate/100K Population"))
+vax_summary<-compose(vax_summary,part="header",i=1,j=c(7,9),value=as_paragraph("% of Pop."))
+vax_summary<-compose(vax_summary,part="body",i=32,j=1,value=as_paragraph("New York"))
+vax_summary<-compose(vax_summary,part="body",i=52,j=1,value=as_paragraph("CNMI"))
+vax_summary<-compose(vax_summary,part="body",i=54,j=1,value=as_paragraph("FSM"))
+vax_summary<-compose(vax_summary,part="body",i=57,j=1,value=as_paragraph("Palau"))
+vax_summary<-compose(vax_summary,part="body",i=59,j=1,value=as_paragraph("US Virgiin Islands"))
+vax_summary<-compose(vax_summary,part="body",i=61,j=1,value=as_paragraph("USA"))
+vax_summary<-compose(vax_summary,part="body",i=60,j=c(3,5,7,9),value=as_paragraph("N/A"))
+
+#add header row
+vax_summary<-add_header_row(x=vax_summary,top=TRUE,values=c("State/Territory","Doses Delivered","Doses Administered","People Receiving \U2265 1 Dose","People Fully Vaccinated"),colwidths=c(1,2,2,2,2))
+vax_summary<-add_header_row(x=vax_summary,top=TRUE,values=c("COVID-19 Vaccine Distribution and Administration Reported to the CDC"),colwidths=c(9))
+vax_summary<-compose(vax_summary,part="header",i=1,j=1,value=as_paragraph("COVID-19 Vaccine Distribution and Administration Reported to the CDC",as_sup("7")))
+
+#add superscript
+vax_summary<-compose(vax_summary,part="header",i=2,j=1,value=as_paragraph("State/Territory",as_sup("8")))
+vax_summary<-compose(vax_summary,part="header",i=3,j=c(2,4),value=as_paragraph("Total",as_sup("9")))
+vax_summary<-compose(vax_summary,part="body",i=60,j=1,value=as_paragraph("Unspecified",as_sup("10")))
+vax_summary<-compose(vax_summary,part="body",i=61,j=1,value=as_paragraph("USA",as_sup("11")))
+ 
+#apply theme box to the table  
+vax_summary<-theme_box(vax_summary)
+ 
+#set background color
+vax_summary<-bg(x=vax_summary,i=2:3,bg="#D9D9D9",part="header")
+vax_summary<-bg(x=vax_summary,i=61,bg="#1C696A",part="body")
+vax_summary<-bg(x=vax_summary,i=1,j=1,bg="#1C696A",part="header")
+
+#set color
+vax_summary<-color(x=vax_summary,i=1,j=1,color="white",part="header")
+vax_summary<-color(x=vax_summary,i=61,color="white",part="body")
+  
+#set align
+vax_summary<-align(x=vax_summary,i=1:61,j=c(7,9),align="right",part="body")
+vax_summary<-align(x=vax_summary,i=1:61,j=1,align="center",part="body")
+vax_summary<-align(x=vax_summary,i=2:3,align="center",part="header")
+vax_summary<-align(x=vax_summary,i=1,j=1,align="center",part="header")
+   
+#set fontsize
+vax_summary<-fontsize(x=vax_summary,i=1,j=1,size=10,part="header")
+vax_summary<-fontsize(x=vax_summary,i=2:3,size=8,part="header")
+vax_summary<-fontsize(x=vax_summary,i=1:61,j=1:9,size=9,part="body")
+    
+#set bold
+vax_summary<-bold(x=vax_summary,i=61,part="body")
+vax_summary<-bold(x=vax_summary,i=1:61,j=1,part="body")
+#merge cells
+vax_summary<-merge_at(x=vax_summary,i=2:3,j=1,part="header")
+
+vax_summary
+```
+
+N/A=Not available (no data)
+
+Data as of Jul 20, 2022, 06:00 ET; Sources: Data Monitoring and Reporting Section, Vaccine Task Force; [COVID Tracker](https://covid.cdc.gov/covid-data-tracker/#vaccinations_vacc-people-additional-dose-totalpop); US Census[^7][^8][^9][^10]
+
+[^7]: \tiny Green shading indicates higher rates of vaccine delivery or administration relative to other jurisdictions. Rates were calculated based on 2019 US Census data for US States, DC, and Puerto Rico; and based on 2020 US Census data for all other US territories.
+
+[^8]: \tiny CNMI = Commonwealth of the Northern Mariana Islands, FEMA = Federal Emergency Management Agency, FSM = Federated States of Micronesia, HRSA = Health Resources and Services Administration, RMI = Republic of Marshall Islands, and USVI = US Virgin Islands
+
+[^9]: \tiny Doses delivered to and administered in each jurisdiction include doses that were delivered to and administered by federal entities and retail pharmacies. Revisions to delivery data from providers may occur on occasion, resulting in a decrease in doses delivered\] \^\[Unspecified entities include doses delivered or administered by federal agencies outside the US or in unspecified jurisdictions.
+
+[^10]: \tiny The total doses allocated includes data from federal agencies and pharmacies. The total doses delivered or administered by a jurisdiction includes doses delivered to or administered by federal agencies. The US total also includes doses delivered to or administered by federal agencies where the jurisdiction was not specified.

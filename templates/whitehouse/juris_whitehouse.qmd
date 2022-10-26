@@ -1,0 +1,1093 @@
+---
+title: |
+   State of the Pandemic
+subtitle: |
+   Dr. Rochelle P. Walensky
+editor: visual
+execute:
+  echo: false
+  warning: false
+output:
+  powerpoint_presentation: default
+  html_document:
+    df_print: paged
+format: html
+params:
+  juris: ME
+  refreshData: true
+  timeframe: Daily
+  username: !r Sys.getenv("USERNAME")
+  forecastnumber: 1,026,000 to 1,034,000
+code-fold: true
+---
+
+```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(flextable)
+library(zoo)
+library(scales)
+library(officer)
+library(png)
+library(readxl)
+library(lubridate)
+library(ggthemes)
+library(grid)
+library(gridExtra)
+library(readr)
+library(DBI)
+library(glue)
+library(ggplot2)
+library(maps)
+library(mapdata)
+library(usmap)
+library(rlang)
+devtools::load_all()
+theme_set(theme_classic())
+```
+
+```{r, select-juris,warning=FALSE, message=FALSE, echo=FALSE}
+state <- tibble(state.name,state.abb) |> filter(state.abb == params$juris) 
+```
+
+```{r, refresh-data,eval = params$refreshData, warning=FALSE, message=FALSE, echo=FALSE}
+get_case_death_juris_tbl(username = params$username) |>  mutate(cases_date = lubridate::ymd(cases_date)) |> 
+    write_rds(here::here("data/cases_deaths_juris_tbl.rds"))
+get_hosp_juris_tbl(username = params$username) |> write_rds(here::here("data/hosp_juris_tbl.rds"))
+get_lab_juris_tbl(username = params$username)|> write_rds( here::here("data/lab_juris_tbl.rds"))
+```
+
+```{r load_data,warning=FALSE, message=FALSE, echo=FALSE}
+#get jurisdictional case data, death data, hospital data, and lab data
+case_juris_tbl  <- read_rds(here::here("data/cases_deaths_juris_tbl.rds")) |> 
+                            filter(juris == params$juris) |> 
+                            select(!contains("deaths"))
+
+death_juris_tbl <- read_rds(here::here("data/cases_deaths_juris_tbl.rds")) |> 
+                            filter(juris == params$juris) |> 
+                            select(!contains("cases"))
+
+hosp_juris_tbl  <- read_rds(here::here("data/hosp_juris_tbl.rds"))|>
+                            filter(juris == params$juris)|>select(-hosp_cum)|>
+                            mutate(hosp_cum=sum(hosp_new))
+
+lab_juris_tbl   <- read_rds(here::here("data/lab_juris_tbl.rds"))|> 
+                            filter(juris == params$juris)
+
+```
+
+```{r caseplot, warning=FALSE, message=FALSE, echo=FALSE}
+#set dates
+end_date_raw<-max(case_juris_tbl$cases_date)
+end_Bdate<-format(end_date_raw,format="%B %d, %Y")
+end_date<-format(end_date_raw,format="%m/%d/%y")
+caseend_date_6<- format(end_date_raw-6, format="%m/%d/%y")
+caseend_date_7<- format(end_date_raw-7, format="%m/%d/%y")
+caseend_date_13<- format(end_date_raw-13, format="%m/%d/%y")
+caseend_date_14<- format(end_date_raw-14, format="%m/%d/%y")
+caseend_date_27<- format(end_date_raw-27, format="%m/%d/%y")
+hospend_date_raw<-max(hosp_juris_tbl$hosp_date,na.rm=TRUE)
+hospend_Bdate<-format(hospend_date_raw,format="%B %d, %Y")
+hospend_date<-format(hospend_date_raw,format="%m/%d/%y")
+hospend_date_6<- format(hospend_date_raw-6, format="%m/%d/%y")
+hospend_date_7<- format(hospend_date_raw-7, format="%m/%d/%y")
+hospend_date_13<- format(hospend_date_raw-13, format="%m/%d/%y")
+hospend_date_14<- format(hospend_date_raw-14, format="%m/%d/%y")
+hospend_date_27<- format(hospend_date_raw-27, format="%m/%d/%y")
+
+#set case title
+casetitle<-data.frame(title=glue("{params$timeframe} Change in COVID-19 Cases, {state$state.name}"),subtitle=glue("January 22, 2020 - {end_Bdate}"))%>%
+pivot_longer( cols = everything(),
+                 names_to = "names",
+                values_to = "val", 
+               values_transform = list(val = as.character))%>%
+select(val)%>%flextable()
+
+#set title format function
+titleformat<-function(dataset){
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-height(dataset,height=0.25)
+dataset<-width(dataset,width=158)
+dataset<-fontsize(x=dataset,i=1,size=27,part="body")
+dataset<-fontsize(x=dataset,i=2,size=18,part="body")
+dataset<-font(x=dataset,i=2,font="Georgia",part="body")
+dataset<-bold(x=dataset,j=1,part="body")
+dataset<-color(x=dataset,i=1,j=1,color="white",part="header")
+dataset<-color(x=dataset,i=1,color="#041690",part="body")
+dataset<-color(x=dataset,i=2,color="black",part="body")
+dataset<-align(x=dataset,align="left",part="body")
+dataset<-border_remove(dataset)
+return(dataset)
+}
+#format case title
+casetitle<-titleformat(casetitle)
+#save case title image
+casetitleimg<-save_as_image(casetitle,path="../../resources/images/casetitle.png",webshot="webshot2")
+casetitleimg<-readPNG("../../resources/images/casetitle.png")
+casetitle<-rasterGrob(casetitleimg)
+
+#set case numbers
+cases_numbers <- case_juris_tbl %>% 
+mutate(
+    #weekly cases
+    cases_cum7 = rollsum(cases_new,7,align = "right", fill = NA) ,
+    #7 day avg case
+    cases_7avg = rollmean(cases_new,7,align = "right", fill = NA)%>% round(0),
+    #prior 7 day avg case
+    cases_prior_7avg=lag(cases_7avg,order_by = cases_date,7)%>% round(0),
+    #percent change of 7 day avg
+    cases_7change  = (cases_7avg - cases_prior_7avg)/cases_prior_7avg,
+    #14 day avg case
+    cases_14avg = rollmean(cases_new,14,align = "right", fill = NA)%>% round(0),
+    #prior 14 day avg case
+    cases_prior_14avg=lag(cases_14avg,order_by = cases_date,14)%>% round(0),
+    #percent change of 14 day avg
+    cases_14change  = (cases_14avg - cases_prior_14avg)/cases_prior_14avg
+       ) %>%  filter(cases_date==max(cases_date))%>%
+mutate(
+    #format numbers
+cases_cum = cases_cum %>% format(justify = "right", big.mark = ","),
+cases_cum7 = cases_cum7 %>% format(justify = "right", big.mark = ","),
+cases_new = cases_new%>%format(justify="right",big.mark=","),
+cases_7avg=label_number(big.mark=",",accuracy=1)(cases_7avg),
+cases_prior_7avg=label_number(big.mark=",",accuracy=1)(cases_prior_7avg),
+cases_7change=label_percent(decimal.mark=".",accuracy = .1)(cases_7change),
+cases_14avg=label_number(big.mark=",",accuracy=1)(cases_14avg),
+cases_prior_14avg=label_number(big.mark=",",accuracy=1)(cases_prior_14avg),
+cases_14change=label_percent(decimal.mark=".",accuracy = .1)(cases_14change)
+     )
+#define case numbers function
+casedaily_weekly_numbers<-function(timeframe){
+if (timeframe=="Daily"){
+case_numbers_list<-data.frame(
+totalname="TOTAL Cases Reported Since 1/22/20",
+totalnumber=cases_numbers$cases_cum,
+newname=glue("NEW Cases Reported to CDC on {end_date}"),
+newnumber=cases_numbers$cases_new,
+changename="Change in 7-Day Case Average",
+change=cases_numbers$cases_7change,
+averagename=glue("Current 7-Day Case Average ({caseend_date_6} - {end_date})"),
+averagenumber=cases_numbers$cases_7avg,
+prioraveragename=glue("Prior 7-Day Case Average ({caseend_date_13} - {caseend_date_7})"),
+prioraveragenumber=cases_numbers$cases_prior_7avg
+)%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+return(case_numbers_list)}
+else if(timeframe=="Weekly"|timeframe=="Monthly") {
+case_numbers_list<-data.frame(
+totalname="TOTAL Cases Reported Since 1/22/20",
+totalnumber=cases_numbers$cases_cum,
+newname=glue("NEW Cases Reported to CDC on {end_date}"),
+newnumber=cases_numbers$cases_new,
+changename="Change in 14-Day Case Average",
+change=cases_numbers$cases_14change,
+averagename=glue("Current 14-Day Case Average ({caseend_date_13} - {end_date})"),
+averagenumber=cases_numbers$cases_14avg,
+prioraveragename=glue("Prior 14-Day Case Average ({caseend_date_27} - {caseend_date_14})"),
+prioraveragenumber=cases_numbers$cases_prior_14avg
+)%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+  
+return(case_numbers_list)
+}
+}
+
+#define case numbers list format
+numberslistformat<-function(dataset){
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-height(dataset,i=c(1,3,5,7,9),height=0.9)
+dataset<-height(dataset,i=c(2,4,6,8,10),height=1.1)
+dataset<-width(dataset,width=112)
+dataset<-fontsize(x=dataset,i=c(1,3,5,7,9),size=29,part="body")
+dataset<-fontsize(x=dataset,i=c(2,4,6,8,10),size=36,part="body")
+dataset<-color(x=dataset,i=1,j=1,color="white",part="header")
+dataset<-color(x=dataset,i=c(1,3,5,7,9),color="#062a78",part="body")
+dataset<-bold(x=dataset,j=1,part="body")
+dataset<-align(x=dataset,align="left",part="body")
+dataset<-border_remove(dataset)
+dataset<-bg(x=dataset,j=1,bg="#fff8dc",part="body")
+std_border<-fp_border(color="#ba8759",width=2)
+dataset<-hline(x=dataset,i=4,border=std_border,part="body")
+return (dataset)
+}
+#get daily or weekly case numbers list
+case_numbers_list<-casedaily_weekly_numbers(params$timeframe)
+#format case numbers list
+case_numbers_list<-numberslistformat(case_numbers_list)
+#save the case numbers list as image
+casenumbersimg<-save_as_image(case_numbers_list,path="../../resources/images/casenumbers.png",webshot="webshot2")
+casenumbersimg<-readPNG("../../resources/images/casenumbers.png")
+casenumbers<-rasterGrob(casenumbersimg)
+
+#define case plot function
+casedaily_weekly_monthly_plot<-function(timeframe){
+if (timeframe=="Daily"){
+#get the latest date
+latestcase_date<-max(case_juris_tbl$cases_date,na.rm=TRUE)
+#get the 7 day avg on the latest date
+latestcase_average<-case_juris_tbl%>%filter(cases_date==max(cases_date,na.rm=TRUE))%>%head(1)%>%pull(cases_avg)
+#format the 7 day avg on the latest date
+latest_caseavg_format<-latestcase_average%>%format(big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 7 day avg of 2021
+lowestavg2021<-case_juris_tbl%>%filter(year(cases_date)==2021)%>%filter(cases_avg==min(cases_avg,na.rm=TRUE))%>%head(1)%>%pull(cases_avg)
+#get the date of the lowest 7 day avg of 2021
+lowestavg2021date<-case_juris_tbl%>%filter(year(cases_date)==2021)%>%filter(cases_avg==min(cases_avg,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#format the lowest 7 day avg of 2021
+lowestavg2021_format<-lowestavg2021%>%format(big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 7 day avg of 2022
+lowestavg2022<-case_juris_tbl%>%filter(year(cases_date)==2022)%>%filter(cases_avg==min(cases_avg,na.rm=TRUE))%>%head(1)%>%pull(cases_avg)
+#get the date of the lowest 7 day avg of 2022
+lowestavg2022date<-case_juris_tbl%>%filter(year(cases_date)==2022)%>%filter(cases_avg==min(cases_avg,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#format the lowest 7 day avg of 2022
+lowestavg2022_format<-lowestavg2022%>%format(big.mark= ",",digits   = 0,scientific=FALSE)
+#get the maximal daily cases
+maxnew<-max(case_juris_tbl$cases_new,na.rm=TRUE)
+#plot daily cases curve
+caseplot<-ggplot(case_juris_tbl,aes(cases_date)) +
+geom_col(aes(y=cases_new, fill = " New Cases"),color="#B4C7E7") +
+#add the black line of the lowest 7 day avg of 2021
+geom_col(aes(y={lowestavg2021}/700,x={lowestavg2021date}),color="black")+
+#add the black line of the lowest 7 day avg of 2022
+geom_col(aes(y={lowestavg2022}/700,x={lowestavg2022date}),color="black")+
+#add the red line of the latest 7 day avg
+geom_col(aes(y={latestcase_average}/980,x={latestcase_date}),color="red")+
+#add the 7 day avg line 
+geom_line(aes(y=cases_avg, color = "7-Day Moving Average - New Cases"))+
+#set the color of 7 day avg line
+scale_color_manual("",values=c("7-Day Moving Average- New Cases  "="#757575"))+
+#set the color of daily case column
+scale_fill_manual("",values=c("#B4C7E7"))+
+#set axis title 
+  labs(y     = "New Cases",
+       x     = "Date of Report") +
+#add the annotation of the lowest 7 day avg of 2021
+    annotate("text",x={lowestavg2021date},y={lowestavg2021}+{maxnew}/2,label=glue("2021:\n LOWEST\n AVERAGE\n \n{lowestavg2021_format}"),size=2)+
+#add the annotation of the lowest 7 day avg of 2022
+    annotate("text",x={lowestavg2022date},y={lowestavg2022}+{maxnew}/1.2,label=glue("2022:\n LOWEST\n AVERAGE\n \n \n{lowestavg2022_format}"),size=2)+
+#add the annotation of the latest 7 day avg 
+    annotate("text",x={latestcase_date},y={latestcase_average}+{maxnew}/2,label=glue("LATEST\n AVERAGE\n \n{latest_caseavg_format}"),size=2)+
+#set the maximal of the y axis
+    scale_y_continuous(limits=c(0,max(case_juris_tbl$cases_new,na.rm=TRUE)*1.3),labels=label_number(big.mark =","))+
+    #set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+return(caseplot)}
+else if(timeframe=="Weekly") {
+#get the weekly case data
+  case_weekly_epicurve <- case_juris_tbl%>%
+    mutate(
+    cases_cum7 = rollsum(cases_new,7,align = "right", fill = NA)%>% round(0),
+    cases_14avg = rollmean(cases_new,14,align = "right", fill = NA)%>% round(0)
+       ) %>%filter(wday(cases_date)==wday(end_date_raw))
+#get the latest date  
+latestcase_date<-max(case_weekly_epicurve$cases_date,na.rm=TRUE)
+#get the 14 day avg case on the latest date 
+latestcase_average<-case_weekly_epicurve%>%filter(cases_date==max(cases_date,na.rm=TRUE))%>%head(1)%>%pull(cases_14avg)
+#format the 14 day avg case on the latest date 
+latest_caseavg_format<-latestcase_average%>%format(justify="right",big.mark= ",",digits=0,scientific=FALSE)
+#get the lowest 14 day avg of 2021
+lowestavg2021<-case_weekly_epicurve%>%filter(year(cases_date)==2021)%>%filter(cases_14avg==min(cases_14avg,na.rm=TRUE))%>%head(1)%>%pull(cases_14avg)
+#get the date of the lowest 14 day avg of 2021
+lowestavg2021date<-case_weekly_epicurve%>%filter(year(cases_date)==2021)%>%filter(cases_14avg==min(cases_14avg,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#format the lowest 14 day avg of 2021
+lowestavg2021_format<-lowestavg2021%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 14 day avg of 2022
+lowestavg2022<-case_weekly_epicurve%>%filter(year(cases_date)==2022)%>%filter(cases_14avg==min(cases_14avg,na.rm=TRUE))%>%head(1)%>%pull(cases_14avg)
+#get the date of the lowest 14 day avg of 2022
+lowestavg2022date<-case_weekly_epicurve%>%filter(year(cases_date)==2022)%>%filter(cases_14avg==min(cases_14avg,na.rm=TRUE))%>%head(1)%>%pull(cases_date)
+#format the lowest 14 day avg of 2022
+lowestavg2022_format<-lowestavg2022%>%format(big.mark  = ",",digits   = 0,scientific=FALSE) 
+#get the maximal weekly cases
+maxcum<-max(case_weekly_epicurve$cases_cum7,na.rm=TRUE)
+#plot weekly case curve
+  caseplot<-ggplot(case_weekly_epicurve )+
+geom_col(aes(y=cases_cum7,x=cases_date,fill=" Weekly New Cases"),color="#B4C7E7")+
+    #add the black line of the lowest 14 day avg of 2021
+    geom_col(aes(y={lowestavg2021}/14,x={lowestavg2021date}),color="black")+
+    #add the black line of the lowest 14 day avg of 2022
+    geom_col(aes(y={lowestavg2022}/14,x={lowestavg2022date}),color="black")+
+    #add the red line of the latest 14 day avg 
+    geom_col(aes(y={latestcase_average}/17,x={latestcase_date}),color="red")+
+    #add the 14 day avg line  
+    geom_line(aes(y=cases_14avg*7,x=cases_date,group=1,color="14-Day Average Cases    "),size=1.3)+
+      #set the color of 14 day avg line
+scale_color_manual(" ",values=c("14-Day Average Cases    "="#757575"))+
+      #set the color of weekly cases column
+scale_fill_manual(" ",values="#B4C7E7")+
+      #set the axis title
+     labs(y     = "Weekly New Cases",
+          x     = "Date of Report"  ) +
+    #add annotation of the lowest 14 day avg of 2021  
+    annotate("text",x={lowestavg2021date},y={lowestavg2021}+{maxcum}/2,label=glue("2021:\n LOWEST\n AVERAGE\n \n{lowestavg2021_format}"),size=2)+
+    #add annotation of the lowest 14 day avg of 2021  
+    annotate("text",x={lowestavg2022date},y={lowestavg2022}+{maxcum}/1,label=glue("2022:\n LOWEST\n AVERAGE\n \n \n{lowestavg2022_format}"),size=1.8)+
+     #add annotation of the latest 14 day avg   
+    annotate("text",x={latestcase_date},y={latestcase_average}+{maxcum}/2,label=glue("LATEST\n AVERAGE\n \n{latest_caseavg_format}"),size=2)+
+     #set the maximal of y axis
+   scale_y_continuous(limits=c(0,max(case_weekly_epicurve$cases_cum7,na.rm=TRUE)*1.3),labels=label_number(big.mark =","))+
+      #set the theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+  
+return(caseplot)
+}
+  else if(timeframe=="Monthly") {
+#get monthly cases data
+  case_monthly_epicurve <- case_juris_tbl%>%
+group_by(month=lubridate::floor_date(cases_date,'month'))%>%
+mutate(cases_cummonth=sum(cases_new))%>%select(month,cases_cummonth)%>%
+arrange(month)%>%ungroup()%>%unique()
+  
+#get the latest month  
+latestnew_date<-max(case_monthly_epicurve$month,na.rm=TRUE)
+#get the montly cases in the latest month
+latestcase_new<-case_monthly_epicurve%>%tail(1)%>%pull(cases_cummonth)
+#format the montly cases in the latest month
+latest_casenew_format<-latestcase_new%>%format(justify="right",big.mark= ",",digits=0,scientific=FALSE)
+#get the lowest monthly cases in 2021 
+lowestnew2021min<-case_monthly_epicurve%>%filter(year(month)==2021)%>%
+filter(cases_cummonth==min(cases_cummonth,na.rm=TRUE))%>%head(1)%>%
+pull(cases_cummonth)
+#get the month of the lowest monthly cases in 2021
+lowestnew2021date<-case_monthly_epicurve%>%filter(year(month)==2021)%>%filter(cases_cummonth==lowestnew2021min,na.rm=TRUE)%>%head(1)%>%pull(month)
+#format the lowest monthly cases in 2021 
+lowestnew2021_format<-lowestnew2021min%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest monthly cases in 2022
+lowestnew2022min<-case_monthly_epicurve%>%filter(year(month)==2022)%>%filter(cases_cummonth==min(cases_cummonth,na.rm=TRUE))%>%head(1)%>%pull(cases_cummonth)
+#get the month of the lowest monthly cases in 2022
+lowestnew2022date<-case_monthly_epicurve%>%filter(year(month)==2022)%>%filter(cases_cummonth==lowestnew2022min,na.rm=TRUE)%>%head(1)%>%pull(month)
+#format the lowest monthly cases in 2022
+lowestnew2022_format<-lowestnew2022min%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE) 
+#get the maximal monthly cases
+maxcum<-max(case_monthly_epicurve$cases_cummonth,na.rm=TRUE)
+#plot monthly case curve
+caseplot<-ggplot(case_monthly_epicurve)+
+    geom_col(aes(x=month,y=cases_cummonth),fill="#B4C7E7")+
+    #add the black line of the lowest monthly cases of 2021
+    geom_col(aes(y={lowestnew2021min}/38,x={lowestnew2021date}),color="black")+
+    #add the black line of the lowest monthly cases of 2022
+    geom_col(aes(y={lowestnew2022min}/38,x={lowestnew2022date}),color="black")+
+    #add the red line of the latest monthly cases
+    geom_col(aes(y={latestcase_new}/35,x={latestnew_date}),color="red")+
+    #set the axis title
+     labs(y     = "Monthly New Cases",
+          x     = "Month of Report" ) +
+    #set the color of the monthly cases column
+    scale_fill_manual("",values=c("#B4C7E7"))+
+    #add the annotation of the lowest monthly cases of 2021
+   annotate("text",x={lowestnew2021date},y={lowestnew2021min}+{maxcum}/2,label=glue("2021:\n LOWEST\n CASES\n \n{lowestnew2021_format}"),size=2)+
+    #add the annotation of the lowest monthly cases of 2022
+    annotate("text",x={lowestnew2022date},y={lowestnew2022min}+{maxcum}/1.2,label=glue("2022:\n LOWEST\n CASES\n \n \n{lowestnew2022_format}"),size=2)+
+    #add the annotation of the latest monthly cases 
+    annotate("text",x={latestnew_date},y={latestcase_new}+{maxcum}/2,label=glue("LATEST\n CASES\n \n{latest_casenew_format}"),size=2)+
+    #set the maximal value of y axis
+   scale_y_continuous(limits=c(0,max(case_monthly_epicurve$cases_cummonth,na.rm=TRUE)*1.3),labels=label_number(big.mark =","))+
+    #set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+return(caseplot)
+}
+} 
+#plot daily or weekly or monthly 
+caseplot<-casedaily_weekly_monthly_plot(params$timeframe)
+#ggplot case title
+casetitleplot<-ggplot()+theme_void()+ 
+    annotation_custom(casetitle,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#ggplot case numbers list
+casenumbersplot<-ggplot()+theme_void()+ 
+    annotation_custom(casenumbers,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#final case plot
+casebottomplot<-cowplot::plot_grid(casenumbersplot,caseplot,ncol=2,rel_widths=c(1,1.5))
+casefinalplot<-cowplot::plot_grid(casetitleplot,casebottomplot,nrow=2,rel_heights=c(1,3))
+casefinalplot
+```
+
+```{r hospitalplot, warning=FALSE, message=FALSE, echo=FALSE}
+#set hospital title
+hosptitle<-data.frame(title=glue("{params$timeframe} Change in COVID-19 Hospital Admissions, {state$state.name}"),subtitle=glue("August 01, 2020 - {hospend_Bdate}"))%>%
+pivot_longer( cols = everything(),
+                 names_to = "names",
+                values_to = "val", 
+               values_transform = list(val = as.character))%>%
+select(val)%>%flextable()
+#format hospital title and save the image
+hosptitle<-titleformat(hosptitle)
+hosptitle<-fontsize(x=hosptitle,i=1,size=23,part="body")
+hosptitleimg<-save_as_image(hosptitle,path="../../resources/images/hosptitle.png",webshot="webshot2")
+hosptitleimg<-readPNG("../../resources/images/hosptitle.png")
+hosptitle<-rasterGrob(hosptitleimg)
+
+#hospital numbers
+hosp_numbers <- hosp_juris_tbl %>%
+mutate(#weekly admissions
+       hosp_cum7 =rollsum(hosp_new,7,align = "right", fill = NA) ,
+       #7 day avg admission
+       hosp_7avg = rollmean(hosp_new,7,align = "right", fill = NA)%>% round(0),
+       #prior 7 day avg admission
+       hosp_prior_7avg=lag(hosp_7avg,order_by = hosp_date,7)%>% round(0),
+       #percent change of 7 day avg admission
+       hosp_7change  = (hosp_7avg - hosp_prior_7avg)/hosp_prior_7avg,
+       #14 day avg admission
+       hosp_14avg = rollmean(hosp_new,14,align = "right", fill = NA)%>% round(0),
+       #prior 14 day avg admission
+       hosp_prior_14avg=lag(hosp_14avg,order_by = hosp_date,14)%>% round(0),
+       #percent change of 14 day avg admission
+       hosp_14change  = (hosp_14avg - hosp_prior_14avg)/hosp_prior_14avg
+       ) %>%  filter(hosp_date==max(hosp_date,na.rm=TRUE))%>%
+mutate(
+    #format hospital numbers
+total_patients=total_patients%>%format(justify="right",big.mark=","),
+hosp_cum = hosp_cum%>%format(justify="right",big.mark=","),
+hosp_cum7 = hosp_cum7%>%format(justify="right",big.mark=","),
+hosp_new = hosp_new%>%format(justify="right",big.mark=","),
+hosp_7avg=label_number(big.mark=",",accuracy=1)(hosp_7avg),
+hosp_prior_7avg=label_number(big.mark=",",accuracy=1)(hosp_prior_7avg),
+hosp_7change=label_percent(decimal.mark=".",accuracy = .1)(hosp_7change),
+hosp_14avg=label_number(big.mark=",",accuracy=1)(hosp_14avg),
+hosp_prior_14avg=label_number(big.mark=",",accuracy=1)(hosp_prior_14avg),
+hosp_14change=label_percent(decimal.mark=".",accuracy = .1)(hosp_14change)
+     )
+#get the maximal admissions
+hosp_newpeak<-max(hosp_juris_tbl$hosp_new,na.rm=TRUE)
+#get the date of the maximal admissions
+hosp_newpeakdate<-hosp_juris_tbl%>%filter(hosp_new==hosp_newpeak)%>%head(1)%>%pull(hosp_date)
+#format the maximal admissions
+hosp_newpeakformat<-hosp_newpeak%>%format(justify="right",big.mark=",")
+#format the date of the maximal admissions
+hosp_newpeakdate<-format(hosp_newpeakdate,"%m/%d/%y")
+
+#define hospital numbers function
+hospdaily_weekly_numbers<-function(timeframe){
+if (timeframe=="Daily"){
+hosp_numbers_list<-data.frame(
+patientsname=glue("Patients Currently Hospitalized with COVID on {hospend_date}"),
+patientnumber=hosp_numbers$total_patients,
+newname=glue("New Admissions on {hospend_date}"),
+newnumber=hosp_numbers$hosp_new,
+peakname=glue("Peak in New Admissions({hosp_newpeakdate})"),
+admissionpeak=hosp_newpeakformat,
+changename="Change in 7-Day Average of New Admissioins",
+change=hosp_numbers$hosp_7change,
+averagename=glue("Current 7-Day Average of New Admissions ({hospend_date_6} - {hospend_date})"),
+averagenumber=hosp_numbers$hosp_7avg,
+prioraveragename=glue("Prior 7-Day Average of New Admissions ({hospend_date_13} - {hospend_date_7})"),
+prioraveragenumber=hosp_numbers$hosp_prior_7avg
+)%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+return(hosp_numbers_list)}
+else if(timeframe=="Weekly"|timeframe=="Monthly") {
+hosp_numbers_list<-data.frame(
+patientsname=glue("Patients Currently Hospitalized with COVID on {hospend_date}"),
+patientnumber=hosp_numbers$total_patients,
+newname=glue("New Admissions on {hospend_date}"),
+newnumber=hosp_numbers$hosp_new,
+peakname=glue("Peak in New Admissions({hosp_newpeakdate})"),
+admissionpeak=hosp_newpeakformat,
+changename="Change in 14-Day Average of New Admissioins",
+change=hosp_numbers$hosp_14change,
+averagename=glue("Current 14-Day Average of New Admissions ({hospend_date_13} - {hospend_date})"),
+averagenumber=hosp_numbers$hosp_14avg,
+prioraveragename=glue("Prior 14-Day Average of New Admissions ({hospend_date_27} - {hospend_date_14})"),
+prioraveragenumber=hosp_numbers$hosp_prior_14avg
+)%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+  
+return(hosp_numbers_list)
+}
+}
+#get daily or weekly hospital numbers list
+hosp_numbers_list<-hospdaily_weekly_numbers(params$timeframe)
+#format hospital numbers list
+hosp_numbers_list<-numberslistformat(hosp_numbers_list)
+hosp_numbers_list<-width(hosp_numbers_list,width=62)
+hosp_numbers_list<-height(hosp_numbers_list,i=c(1,3,5,7,9,11),height=0.7)
+hosp_numbers_list<-height(hosp_numbers_list,i=c(2,4,6,8,10,12),height=0.9)
+hosp_numbers_list<-fontsize(x=hosp_numbers_list,i=c(1,3,5,7,9,11),size=23,part="body")
+hosp_numbers_list<-fontsize(x=hosp_numbers_list,i=12,size=38,part="body")
+hosp_numbers_list<-color(x=hosp_numbers_list,i=11,color="#062a78",part="body")
+#save hospital numbers list as image
+hospnumbersimg<-save_as_image(hosp_numbers_list,path="../../resources/images/hospnumbers.png",webshot="webshot2")
+hospnumbersimg<-readPNG("../../resources/images/hospnumbers.png")
+hospnumbers<-rasterGrob(hospnumbersimg)
+
+
+#define hospital plot function
+hospdaily_weekly_monthly_plot<-function(timeframe){
+if (timeframe=="Daily"){
+#get the latest date
+latesthosp_date<-max(hosp_juris_tbl$hosp_date,na.rm=TRUE)
+#get the 7 day avg admission on the latest date
+latesthosp_average<-hosp_juris_tbl%>%filter(hosp_date==max(hosp_date,na.rm=TRUE))%>%head(1)%>%pull(hosp_avg)
+#format the 7 day avg admission on the latest date
+latest_hospavg_format<-latesthosp_average%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 7 day avg admission of 2021
+hosplowestavg2021<-hosp_juris_tbl%>%filter(year(hosp_date)==2021)%>%filter(hosp_avg==min(hosp_avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_avg)
+#get the date of the lowest 7 day avg admission of 2021
+hosplowestavg2021date<-hosp_juris_tbl%>%filter(year(hosp_date)==2021)%>%filter(hosp_avg==min(hosp_avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+#format the lowest 7 day avg admission of 2021
+hosplowestavg2021_format<-hosplowestavg2021%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 7 day avg admission of 2022
+hosplowestavg2022<-hosp_juris_tbl%>%filter(year(hosp_date)==2022)%>%filter(hosp_avg==min(hosp_avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_avg)
+#get the date of the lowest 7 day avg admission of 2022
+hosplowestavg2022date<-hosp_juris_tbl%>%filter(year(hosp_date)==2022)%>%filter(hosp_avg==min(hosp_avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+#format the lowest 7 day avg admission of 2022
+hosplowestavg2022_format<-hosplowestavg2022%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the maximal daily admissions
+hospmaxnew<-max(hosp_juris_tbl$hosp_new,na.rm=TRUE)
+#plot daily admission curve
+hospplot<-ggplot(hosp_juris_tbl,aes(hosp_date)) +
+geom_col(aes(y=hosp_new, fill = " New Admissions"),color="#B4C7E7") +
+#add the black line of the lowest 7 day avg of 2021
+geom_col(aes(y={hosplowestavg2021}/700,x={hosplowestavg2021date}),color="black")+
+#add the black line of the lowest 7 day avg of 2022
+geom_col(aes(y={hosplowestavg2022}/700,x={hosplowestavg2022date}),color="black")+
+#add the red line of the latest 7 day avg 
+geom_col(aes(y={latesthosp_average}/700,x={latesthosp_date}),color="red")+
+#add 7 day avg admission line
+geom_line(aes(y=hosp_avg, color = "7-Day Moving Average - New Admissions"))+
+#set color of 7 day avg admission line
+scale_color_manual("",values=c("7-Day Moving Average- New Admissions  "="#757575"))+
+#set color of daily admission column
+scale_fill_manual("",values=c("#B4C7E7"))+
+#set axis title
+  labs(y     = "New Admissions",
+       x     = "Date of Report" ) +
+#add annotation of the lowest 7 day avg of 2021
+  annotate("text",x={hosplowestavg2021date},y={hosplowestavg2021}+{hospmaxnew}/1.5,label=glue("2021:\n LOWEST\n AVERAGE\n \n{hosplowestavg2021_format}"),size=2)+
+#add annotation of the lowest 7 day avg of 2022
+    annotate("text",x={hosplowestavg2022date},y={hosplowestavg2022}+{hospmaxnew}/1.2,label=glue("2022:\n LOWEST\n AVERAGE\n \n \n{hosplowestavg2022_format}"),size=2)+
+#add annotation of the latest 7 day avg 
+    annotate("text",x={latesthosp_date},y={latesthosp_average}+{hospmaxnew}/2,label=glue("LATEST\n AVERAGE\n \n \n{latest_hospavg_format}"),size=2)+
+#set the maximal value of y axis
+    scale_y_continuous(limits=c(0,max(hosp_juris_tbl$hosp_new,na.rm=TRUE)*1.3),labels = label_number(big.mark = ","))+
+    #set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+return(hospplot)}
+else if(timeframe=="Weekly") {
+#get weekly admissions data
+  hosp_weekly_epicurve <- hosp_juris_tbl%>%
+mutate(hosp_cum7 = rollsum(hosp_new,7,align = "right", fill = NA)%>% round(0),
+      hosp_14avg = rollmean(hosp_new,14,align = "right", fill = NA)%>% round(0)
+       ) %>%filter(wday(hosp_date)==wday(hospend_date_raw))
+  #get the latest date
+latesthosp_date<-max(hosp_weekly_epicurve$hosp_date,na.rm=TRUE)
+#get the 14 day avg admission on the latest date
+latesthosp_average<-hosp_weekly_epicurve%>%filter(hosp_date==max(hosp_date,na.rm=TRUE))%>%head(1)%>%pull(hosp_14avg)
+#format the 14 day avg admission on the latest date
+latest_hospavg_format<-latesthosp_average%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 14 day avg admission of 2021
+hosplowestavg2021<-hosp_weekly_epicurve%>%filter(year(hosp_date)==2021)%>%filter(hosp_14avg==min(hosp_14avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_14avg)
+#get the date of the lowest 14 day avg admission of 2021
+hosplowestavg2021date<-hosp_weekly_epicurve%>%filter(year(hosp_date)==2021)%>%filter(hosp_14avg==min(hosp_14avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+#format the lowest 14 day avg admission of 2021
+hosplowestavg2021_format<-hosplowestavg2021%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 14 day avg admission of 2022
+hosplowestavg2022<-hosp_weekly_epicurve%>%filter(year(hosp_date)==2022)%>%filter(hosp_14avg==min(hosp_14avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_14avg)
+#get the date of the lowest 14 day avg admission of 2022
+hosplowestavg2022date<-hosp_weekly_epicurve%>%filter(year(hosp_date)==2022)%>%filter(hosp_14avg==min(hosp_14avg,na.rm=TRUE))%>%head(1)%>%pull(hosp_date)
+#format the lowest 14 day avg admission of 2022
+hosplowestavg2022_format<-hosplowestavg2022%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the maximal weekly admissions 
+hospmaxcum<-max(hosp_weekly_epicurve$hosp_cum7,na.rm=TRUE)
+#plot weekly admissions 
+hospplot<-ggplot(hosp_weekly_epicurve,aes(hosp_date))+
+geom_col(aes(y=hosp_cum7,fill=" Weekly New Admissions"),color ="#B4C7E7")+
+#add the black line of the lowest 14 day avg admission of 2021     
+geom_col(aes(y={hosplowestavg2021}/14,x={hosplowestavg2021date}),color="black")+
+#add the black line of the lowest 14 day avg admission of 2022 
+geom_col(aes(y={hosplowestavg2022}/14,x={hosplowestavg2022date}),color="black")+
+#add the red line of the latest 14 day avg admission 
+geom_col(aes(y={latesthosp_average}/15,x={latesthosp_date}),color="red")+
+#add the 14 day avg line
+geom_line(aes(y=hosp_14avg*7,group=1,color="14-Day Average Admission    "),size=1.3)+
+#set color of 14 day avg line
+scale_color_manual(" ",values=c("14-Day Average Admission    "="#757575"))+
+#set color of weekly admissions column
+scale_fill_manual(" ",values="#B4C7E7")+
+#set the maximal value of y axis
+scale_y_continuous(limits=c(0,max(hosp_weekly_epicurve$hosp_cum7,na.rm=TRUE)*1.3),labels = label_number(big.mark = ","))+
+     labs(y     = "Weekly New Admissions",
+          x     = "Date of Report" ) +
+#add the annotation of the lowest 14 day avg of 2021
+    annotate("text",x={hosplowestavg2021date},y={hosplowestavg2021}+{hospmaxcum}/1.5,label=glue("2021:\n LOWEST\n AVERAGE\n \n{hosplowestavg2021_format}"),size=2)+
+#add the annotation of the lowest 14 day avg of 2021
+    annotate("text",x={hosplowestavg2022date},y={hosplowestavg2022}+{hospmaxcum}/1.1,label=glue("2022:\n LOWEST\n AVERAGE\n \n \n{hosplowestavg2022_format}"),size=2)+
+#add the annotation of the latest 14 day avg
+    annotate("text",x={latesthosp_date},y={latesthosp_average}+{hospmaxcum}/1.5,label=glue("LATEST\n AVERAGE\n \n \n{latest_hospavg_format}"),size=2)+
+#set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+  
+return(hospplot)
+}
+else if(timeframe=="Monthly") {
+#get monthly admissions data
+hosp_monthly_epicurve <- hosp_juris_tbl%>%
+group_by(month=lubridate::floor_date(hosp_date,'month'))%>%
+    mutate(hosp_cummonth=sum(hosp_new))%>%select(month,hosp_cummonth)%>%
+    arrange(month)%>%ungroup()%>%unique()
+  
+  
+ #get the latest month  
+latestnew_date<-max(hosp_monthly_epicurve$month,na.rm=TRUE)
+#get the monthly admission on the latest month
+latesthosp_new<-hosp_monthly_epicurve%>%tail(1)%>%pull(hosp_cummonth)
+#format the monthly admission on the latest month
+latest_hospnew_format<-latesthosp_new%>%format(justify="right",big.mark= ",",digits=0,scientific=FALSE)
+#get the lowest monthly admissions of 2021
+lowestnew2021min<-hosp_monthly_epicurve%>%filter(year(month)==2021)%>%filter(hosp_cummonth==min(hosp_cummonth,na.rm=TRUE))%>%head(1)%>%pull(hosp_cummonth)
+#get the month of the lowest monthly admissions of 2021
+lowestnew2021date<-hosp_monthly_epicurve%>%filter(year(month)==2021)%>%filter(hosp_cummonth==lowestnew2021min)%>%head(1)%>%pull(month)
+#format the lowest monthly admissions of 2021
+lowestnew2021_format<-lowestnew2021min%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest monthly admissions of 2021
+lowestnew2022min<-hosp_monthly_epicurve%>%filter(year(month)==2022)%>%filter(hosp_cummonth==min(hosp_cummonth,na.rm=TRUE))%>%head(1)%>%pull(hosp_cummonth)
+#get the month of the lowest monthly admissions of 2022
+lowestnew2022date<-hosp_monthly_epicurve%>%filter(year(month)==2022)%>%filter(hosp_cummonth==lowestnew2022min)%>%head(1)%>%pull(month)
+#format the lowest monthly admissions of 2022
+lowestnew2022_format<-lowestnew2022min%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE) 
+#get the maximal monthly admissions
+maxcum<-max(hosp_monthly_epicurve$hosp_cummonth,na.rm=TRUE)
+#plot the monthly admission
+hospplot<-ggplot(hosp_monthly_epicurve)+
+    geom_col(aes(x=month,y=hosp_cummonth),fill="#B4C7E7")+
+    #add the black line of the lowest monthly admission of 2021
+    geom_col(aes(y={lowestnew2021min}/28,x={lowestnew2021date}),color="black")+
+    #add the black line of the lowest monthly admission of 2022
+    geom_col(aes(y={lowestnew2022min}/28,x={lowestnew2022date}),color="black")+
+    #add the red line of the latest monthly admission
+    geom_col(aes(y={latesthosp_new}/28,x={latestnew_date}),color="red")+
+#set axis title
+labs(y     = "Monthly New Admissions",
+    x     = "Month of Report" ) +
+#set color of monthly admission column    
+scale_fill_manual("",values=c("#B4C7E7"))+
+#add annotation of the lowest monthly admission of 2021
+   annotate("text",x={lowestnew2021date},y={lowestnew2021min}+{maxcum}/1.3,label=glue("2021:\n LOWEST\n ADMISSIONS\n \n{lowestnew2021_format}"),size=2)+
+#add annotation of the lowest monthly admission of 2022
+    annotate("text",x={lowestnew2022date},y={lowestnew2022min}+{maxcum}/1.2,label=glue("2022:\n LOWEST\n ADMISSIONS\n \n \n{lowestnew2022_format}"),size=2)+
+#add annotation of the latest monthly admission
+    annotate("text",x={latestnew_date},y={latesthosp_new}+{maxcum}/2,label=glue("LATEST\n ADMISSIONS\n \n{latest_hospnew_format}"),size=2)+
+#set the mximal value of y axis
+   scale_y_continuous(limits=c(0,max(hosp_monthly_epicurve$hosp_cummonth,na.rm=TRUE)*1.3),labels=label_number(big.mark =","))+
+    #set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+  
+return(hospplot)
+}
+} 
+
+#plot daily or weekly or monthly admissons curve
+hospplot<-hospdaily_weekly_monthly_plot(params$timeframe)
+#ggplot hospital title
+hosptitleplot<-ggplot()+theme_void()+ 
+    annotation_custom(hosptitle,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#ggplot hospital numbers list
+hospnumbersplot<-ggplot()+theme_void()+ 
+    annotation_custom(hospnumbers,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#form final hospital plot
+hospbottomplot<-cowplot::plot_grid(hospnumbersplot,hospplot,ncol=2,rel_widths=c(1,1.5))
+hospfinalplot<-cowplot::plot_grid(hosptitleplot,hospbottomplot,nrow=2,rel_heights=c(1,3))
+hospfinalplot
+
+```
+
+```{r deathplot, warning=FALSE, message=FALSE, echo=FALSE}
+#set death title
+deathtitle<-data.frame(title=glue("{params$timeframe} Change in COVID-19 Deaths, {state$state.name}"),subtitle=glue("January 22, 2020 - {end_Bdate}"))%>%
+pivot_longer( cols = everything(),
+                 names_to = "names",
+                values_to = "val", 
+               values_transform = list(val = as.character))%>%
+select(val)%>%flextable()
+#format death title and save the image
+deathtitle<-titleformat(deathtitle)
+deathtitleimg<-save_as_image(deathtitle,path="../../resources/images/deathtitle.png",webshot="webshot2")
+deathtitleimg<-readPNG("../../resources/images/deathtitle.png")
+deathtitle<-rasterGrob(deathtitleimg)
+
+#death numbers
+deaths_numbers <- death_juris_tbl %>% 
+mutate(
+    #weekly deaths
+    deaths_cum7 = rollsum(deaths_new,7,align = "right", fill = NA) ,
+    #7 day avg death
+    deaths_7avg = rollmean(deaths_new,7,align = "right", fill = NA)%>% round(0),
+    #prior 7 day avg death
+    deaths_prior_7avg=lag(deaths_7avg,order_by = deaths_date,7)%>% round(0),
+    #percent change of 7 day avg
+    deaths_7change  = (deaths_7avg - deaths_prior_7avg)/deaths_prior_7avg,
+    #14 day avg
+    deaths_14avg=rollmean(deaths_new,14,align = "right", fill = NA)%>% round(0),
+    #prior 14 day avg death
+    deaths_prior_14avg=lag(deaths_14avg,order_by = deaths_date,14)%>% round(0),
+    #percent change of 14 day avg
+    deaths_14change  = (deaths_14avg - deaths_prior_14avg)/deaths_prior_14avg
+       ) %>%  filter(deaths_date==max(deaths_date,na.rm=TRUE))%>%
+mutate(
+    #format numbers
+deaths_cum = deaths_cum %>% format(justify = "right", big.mark = ","),
+deaths_cum7 = deaths_cum7 %>% format(justify = "right", big.mark = ","),
+deaths_new = deaths_new%>%format(justify="right",big.mark=","),
+deaths_7avg=label_number(big.mark=",",accuracy=1)(deaths_7avg),
+deaths_prior_7avg=label_number(big.mark=",",accuracy=1)(deaths_prior_7avg),
+deaths_7change=label_percent(decimal.mark=".",accuracy = .1)(deaths_7change),
+deaths_14avg=label_number(big.mark=",",accuracy=1)(deaths_14avg),
+deaths_prior_14avg=label_number(big.mark=",",accuracy=1)(deaths_prior_14avg),
+deaths_14change=label_percent(decimal.mark=".",accuracy = .1)(deaths_14change)
+     )
+#define death numbers function
+deathdaily_weekly_numbers<-function(timeframe){
+if (timeframe=="Daily"){
+death_numbers_list<-data.frame(
+totalname="TOTAL Deaths Reported Since 1/22/20",
+totalnumber=deaths_numbers$deaths_cum,
+newname=glue("NEW Deaths Reported to CDC on {end_date}"),
+newnumber=deaths_numbers$deaths_new,
+changename="Change in 7-Day Death Average",
+change=deaths_numbers$deaths_7change,
+averagename=glue("Current 7-Day Death Average ({caseend_date_6} - {end_date})"),
+averagenumber=deaths_numbers$deaths_7avg,
+prioraveragename=glue("Prior 7-Day Death Average ({caseend_date_13} - {caseend_date_7})"),
+prioraveragenumber=deaths_numbers$deaths_prior_7avg,
+forecastname=glue("Forcasted Total Deaths by week ending ({caseend_date_6})"),
+forecastnumber=params$forecastnumber
+)%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+return(death_numbers_list)}
+else if(timeframe=="Weekly"|timeframe=="Monthly") {
+death_numbers_list<-data.frame(
+totalname="TOTAL Deaths Reported Since 1/22/20",
+totalnumber=deaths_numbers$deaths_cum,
+newname=glue("NEW Deaths Reported to CDC on {end_date}"),
+newnumber=deaths_numbers$deaths_new,
+changename="Change in 14-Day Death Average",
+change=deaths_numbers$deaths_14change,
+averagename=glue("Current 14-Day Death Average ({caseend_date_13} - {end_date})"),
+averagenumber=deaths_numbers$deaths_14avg,
+prioraveragename=glue("Prior 14-Day Death Average ({caseend_date_27} - {caseend_date_14})"),
+prioraveragenumber=deaths_numbers$deaths_prior_14avg,
+forecastname=glue("Forcasted Total Deaths by week ending ({caseend_date_6})"),
+forecastnumber=params$forecastnumber
+)%>%
+pivot_longer( cols = everything(),
+              names_to = "names",
+              values_to = "val", 
+              values_transform = list(val = as.character))%>%select(val)%>%flextable()
+  
+return(death_numbers_list)
+}
+}
+#get daily or weekly death numbers list
+death_numbers_list<-deathdaily_weekly_numbers(params$timeframe)
+#format death numbers list 
+death_numbers_list<-numberslistformat(death_numbers_list)
+death_numbers_list<-width(death_numbers_list,width=62)
+death_numbers_list<-height(death_numbers_list,i=c(1,3,5,7,9,11),height=0.7)
+death_numbers_list<-height(death_numbers_list,i=c(2,4,6,8,10,12),height=0.9)
+death_numbers_list<-fontsize(x=death_numbers_list,i=c(1,3,5,7,9,11),size=29,part="body")
+death_numbers_list<-fontsize(x=death_numbers_list,i=c(2,4,6,8,10,12),size=38,part="body")
+death_numbers_list<-color(x=death_numbers_list,i=11,color="#062a78",part="body")
+
+#save death numbers list as image
+deathnumbersimg<-save_as_image(death_numbers_list,path="../../resources/images/deathnumbers.png",webshot="webshot2")
+deathnumbersimg<-readPNG("../../resources/images/deathnumbers.png")
+deathnumbers<-rasterGrob(deathnumbersimg)
+
+#define death plot function
+deathdaily_weekly_monthly_plot<-function(timeframe){
+if (timeframe=="Daily"){
+#get the latest death date
+latestdeath_date<-max(death_juris_tbl$deaths_date,na.rm=TRUE)
+#get the 7 day avg deaht on the latest death date
+latestdeath_average<-death_juris_tbl%>%filter(deaths_date==max(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_avg)
+#format the 7 day avg deaht on the latest death date
+latest_deathavg_format<-latestdeath_average%>%format(justify="right",big.mark= ",",digits=0,scientific=FALSE)
+#get the lowest 7 day avg deahth of 2021
+deathlowestavg2021<-death_juris_tbl%>%filter(year(deaths_date)==2021)%>%filter(deaths_avg==min(deaths_avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_avg)
+#get the date of the lowest 7 day avg deahth of 2021
+deathlowestavg2021date<-death_juris_tbl%>%filter(year(deaths_date)==2021)%>%filter(deaths_avg==min(deaths_avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+#format the lowest 7 day avg deahth of 2021
+deathlowestavg2021_format<-deathlowestavg2021%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 7 day avg deahth of 2022 
+deathlowestavg2022<-death_juris_tbl%>%filter(year(deaths_date)==2022)%>%filter(deaths_avg==min(deaths_avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_avg)
+#get the date of the lowest 7 day avg deahth of 2022
+deathlowestavg2022date<-death_juris_tbl%>%filter(year(deaths_date)==2022)%>%filter(deaths_avg==min(deaths_avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+#format the lowest 7 day avg deahth of 2022
+deathlowestavg2022_format<-deathlowestavg2022%>%format(big.mark  = ",",digits   = 0,scientific=FALSE) 
+#get the maximal daily deaths
+deathmaxnew<-max(death_juris_tbl$deaths_new,na.rm=TRUE)
+#plot the daily deaths
+deathplot<-ggplot(death_juris_tbl,aes(deaths_date)) +
+geom_col(aes(y=deaths_new, fill = " New Deaths   "),color="#B4C7E7") +
+     #add the black line of the lowest 7 day avg of 2021
+geom_col(aes(y={deathlowestavg2021}/700,x={deathlowestavg2021date}),color="black")+
+    #add the black line of the lowest 7 day avg of 2022
+geom_col(aes(y={deathlowestavg2022}/700,x={deathlowestavg2022date}),color="black")+
+    #add the red line of the lowest 7 day avg of 2021
+geom_col(aes(y={latestdeath_average}/980,x={latestdeath_date}),color="red")+
+    #add the 7 day avg line
+geom_line(aes(y=deaths_avg, color = "7-Day Moving Average - New Deaths"))+
+    #set color of the 7 day avg line
+scale_color_manual("",values=c("7-Day Moving Average- New Deaths  "="#757575"))+
+    #set color of daily deaths column
+scale_fill_manual("",values=c("#B4C7E7"))+
+    #set the maximal value of y axis
+scale_y_continuous(limits=c(0,max(death_juris_tbl$deaths_new,na.rm=TRUE)*1.3),labels = label_number(big.mark = ","))+ 
+    #set axis title
+ labs(y     = "New Deaths",
+      x     = "Date of Report") +
+    #add annotation of the lowest 7 day avg of 2021
+    annotate("text",x={deathlowestavg2021date},y={deathlowestavg2021}+{deathmaxnew}/1.5,label=glue("2021:\n LOWEST\n AVERAGE\n \n{deathlowestavg2021_format}"),size=2)+
+    #add annotation of the lowest 7 day avg of 2022
+    annotate("text",x={deathlowestavg2022date},y={deathlowestavg2022}+{deathmaxnew}/1.0,label=glue("2022:\n LOWEST\n AVERAGE\n \n \n{deathlowestavg2022_format}"),size=1.8)+
+    #add annotation of the latest 7 day avg1
+    annotate("text",x={latestdeath_date},y={latestdeath_average}+{deathmaxnew}/2,label=glue("LATEST\n AVERAGE\n \n{latest_deathavg_format}"),size=2)+
+    #set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+return(deathplot)}
+else if(timeframe=="Weekly") {
+death_weekly_epicurve <- death_juris_tbl%>%
+mutate(
+    deaths_cum7 = rollsum(deaths_new,7,align = "right", fill = NA)%>% round(0),
+    deaths_14avg = rollmean(deaths_new,14,align = "right", fill = NA)%>% round(0)
+       ) %>%filter(wday(deaths_date)==wday(end_date_raw))
+#get the latest date
+latestdeath_date<-max(death_weekly_epicurve$deaths_date,na.rm=TRUE)
+#get the 14 avg death on the latest date
+latestdeath_average<-death_weekly_epicurve%>%filter(deaths_date==max(deaths_date,na.rm=TRUE))%>%head(1)%>%pull(deaths_14avg)
+#format the 14 avg death on the latest date
+latest_deathavg_format<-latestdeath_average%>%format(justify="right",big.mark= ",",digits=0,scientific=FALSE)
+#get the lowest 14 day avg death of 2021
+deathlowestavg2021<-death_weekly_epicurve%>%filter(year(deaths_date)==2021)%>%filter(deaths_14avg==min(deaths_14avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_14avg)
+#get the date of the lowest 14 day avg death of 2021
+deathlowestavg2021date<-death_weekly_epicurve%>%filter(year(deaths_date)==2021)%>%filter(deaths_14avg==min(deaths_14avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+#format the lowest 14 day avg death of 2021
+deathlowestavg2021_format<-deathlowestavg2021%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest 14 day avg death of 2022
+deathlowestavg2022<-death_weekly_epicurve%>%filter(year(deaths_date)==2022)%>%filter(deaths_14avg==min(deaths_14avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_14avg)
+#get the date of the lowest 14 day avg death of 2022
+deathlowestavg2022date<-death_weekly_epicurve%>%filter(year(deaths_date)==2022)%>%filter(deaths_14avg==min(deaths_14avg,na.rm=TRUE))%>%head(1)%>%pull(deaths_date)
+#format the lowest 14 day avg death of 2022
+deathlowestavg2022_format<-deathlowestavg2022%>%format(big.mark  = ",",digits   = 0,scientific=FALSE) 
+#get the maximal weekly deaths
+deathmaxcum<-max(death_weekly_epicurve$deaths_cum7,na.rm=TRUE)
+
+#plot weekly deaths 
+deathplot<-ggplot(death_weekly_epicurve )+
+    geom_col(aes(y=deaths_cum7,x=deaths_date,fill=" Weekly New Deaths"),color ="#B4C7E7")+
+    #add the black line of the lowest 14 day avg of 2021
+      geom_col(aes(y={deathlowestavg2021}/16,x={deathlowestavg2021date}),color="black")+
+    #add the black line of the lowest 14 day avg of 2022
+    geom_col(aes(y={deathlowestavg2022}/16,x={deathlowestavg2022date}),color="black")+
+    #add the red line of the latest 14 day avg
+    geom_col(aes(y={latestdeath_average}/17,x={latestdeath_date}),color="red")+
+    #add the 14 day avg line
+    geom_line(aes(y=deaths_14avg*7,x=deaths_date,group=1,color="14-Day Average Deaths    "),size=1.3)+
+#set the color of 14 day avg death line
+scale_color_manual(" ",values=c("14-Day Moving Average- New Deaths    "="#757575"))+
+#set the color of the daily deaths
+scale_fill_manual(" ",values="#B4C7E7")+
+#set the maximal value of the y axis
+scale_y_continuous(limits=c(0,max(death_weekly_epicurve$deaths_cum7,na.rm=TRUE)*1.3),labels = label_number(big.mark = ","))+
+    #set axis title
+     labs(y     = "Weekly New Deaths",
+          x     = "Date of Report") +
+#add the annotation of the lowest 14 day avg of 2021
+   +annotate("text",x={deathlowestavg2021date},y={deathlowestavg2021}+{deathmaxcum}/1.5,label=glue("2021:\n LOWEST\n AVERAGE\n \n{deathlowestavg2021_format}"),size=2)+
+    #add the annotation of the lowest 14 day avg of 2022
+    annotate("text",x={deathlowestavg2022date},y={deathlowestavg2022}+{deathmaxcum}/1.2,label=glue("2022:\n LOWEST\n AVERAGE\n \n \n{deathlowestavg2022_format}"),size=1.8)+
+    #add the annotation of the latest 14 day avg
+    annotate("text",x={latestdeath_date},y={latestdeath_average}+{deathmaxcum}/2,label=glue("LATEST\n AVERAGE\n \n{latest_deathavg_format}"),size=2)+
+    #set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+  
+return(deathplot)
+}
+  else if(timeframe=="Monthly") {
+#get monthly deaths data
+death_monthly_epicurve <- death_juris_tbl%>%
+group_by(month=lubridate::floor_date(deaths_date,'month'))%>%mutate(deaths_cummonth=sum(deaths_new))%>%select(month,deaths_cummonth)%>%arrange(month)%>%ungroup()%>%unique()
+  
+#get the latest month 
+latestnew_date<-max(death_monthly_epicurve$month,na.rm=TRUE)
+#get the monthly deaths in the latest month
+latestdeath_new<-death_monthly_epicurve%>%tail(1)%>%pull(deaths_cummonth)
+#format the monthly deaths in the latest month
+latest_deathnew_format<-latestdeath_new%>%format(justify="right",big.mark= ",",digits=0,scientific=FALSE)
+#get the lowest monthly deaths of 2021
+lowestnew2021min<-death_monthly_epicurve%>%filter(year(month)==2021)%>%filter(deaths_cummonth==min(deaths_cummonth,na.rm=TRUE))%>%head(1)%>%
+pull(deaths_cummonth)
+#get the date of the lowest monthly deaths of 2021
+lowestnew2021date<-death_monthly_epicurve%>%filter(year(month)==2021)%>%filter(deaths_cummonth==lowestnew2021min,na.rm=TRUE)%>%head(1)%>%pull(month)
+#format the lowest monthly deaths of 2021
+lowestnew2021_format<-lowestnew2021min%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE)
+#get the lowest monthly deaths of 2022
+lowestnew2022min<-death_monthly_epicurve%>%filter(year(month)==2022)%>%filter(deaths_cummonth==min(deaths_cummonth,na.rm=TRUE))%>%head(1)%>%
+pull(deaths_cummonth)
+#get the date of the lowest monthly deaths of 2022
+lowestnew2022date<-death_monthly_epicurve%>%filter(year(month)==2022)%>%filter(deaths_cummonth==lowestnew2022min)%>%head(1)%>%pull(month)
+#format the lowest monthly deaths of 2022
+lowestnew2022_format<-lowestnew2022min%>%format(justify = "right",big.mark  = ",",digits   = 0,scientific=FALSE) 
+#get the maximal monthly deaths
+maxcum<-max(death_monthly_epicurve$deaths_cummonth,na.rm=TRUE)
+#plot the monthly deaths
+  deathplot<-ggplot(death_monthly_epicurve)+
+    geom_col(aes(x=month,y=deaths_cummonth),fill="#B4C7E7")+
+    #add the black line of the lowest monthly deaths of 2021
+    geom_col(aes(y={lowestnew2021min}/38,x={lowestnew2021date}),color="black")+
+    #add the black line of the lowest monthly deaths of 2022
+    geom_col(aes(y={lowestnew2022min}/38,x={lowestnew2022date}),color="black")+
+    #add the black line of the latest monthly deaths
+    geom_col(aes(y={latestdeath_new}/35,x={latestnew_date}),color="red")+
+    #set axis title
+     labs(y     = "Monthly New Deaths",
+          x     = "Month of Report"  ) +
+     #set the color of monthly deaths column
+    scale_fill_manual("",values=c("#B4C7E7"))+
+     #add the annotation of the lowest monthly deaths of 2021
+   annotate("text",x={lowestnew2021date},y={lowestnew2021min}+{maxcum}/1.5,label=glue("2021:\n LOWEST\n DEATHS\n \n{lowestnew2021_format}"),size=2)+
+     #add the annotation of the lowest monthly deaths of 2022
+    annotate("text",x={lowestnew2022date},y={lowestnew2022min}+{maxcum}/1.2,label=glue("2022:\n LOWEST\n DEATHS\n \n \n{lowestnew2022_format}"),size=2)+
+     #add the annotation of the latest monthly deaths
+    annotate("text",x={latestnew_date},y={latestdeath_new}+{maxcum}/2.3,label=glue("LATEST\n DEATHS\n \n{latest_deathnew_format}"),size=2)+
+      #set the maximal value of y axis
+   scale_y_continuous(limits=c(0,max(death_monthly_epicurve$deaths_cummonth,na.rm=TRUE)*1.3),labels=label_number(big.mark =","))+
+      #set theme
+    theme(axis.title=element_text(size=rel(0.6),face="bold"),
+          axis.text=element_text(size = rel(0.6), face = "bold"),
+          legend.key.size = unit(0.5, "lines"),
+          legend.text = element_text(size = rel(0.60), face = "bold"),
+          legend.position="top")
+return(deathplot)
+}
+} 
+#plot daily or weekly or monthly death curve
+deathplot<-deathdaily_weekly_monthly_plot(params$timeframe)
+#ggplot death title
+deathtitleplot<-ggplot()+theme_void()+ 
+    annotation_custom(deathtitle,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#ggplot death numbers list
+deathnumbersplot<-ggplot()+theme_void()+ 
+    annotation_custom(deathnumbers,xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=Inf)
+#final death plot
+deathbottomplot<-cowplot::plot_grid(deathnumbersplot,deathplot,ncol=2,rel_widths=c(1,1.5))
+deathfinalplot<-cowplot::plot_grid(deathtitleplot,deathbottomplot,nrow=2,rel_heights=c(1,3))
+deathfinalplot
+```
+
+### `r state$state.name` `r params$timeframe` COVID Report
+
+```{r metrics,warning=FALSE, message=FALSE, echo=FALSE}
+
+std_border=fp_border(color="white")
+#define metrics format function
+metrics_format_function<-function(dataset){
+dataset<-hrule(dataset,rule="exact",part="body")
+dataset<-height(dataset,height=0.78,part="body")
+dataset<-width(dataset,j=1,width=2.0)
+dataset<-width(dataset,j=2,width=1.6)
+dataset<-width(dataset,j=3,width=1.0)
+dataset<-width(dataset,j=4,width=1.0)
+dataset<-width(dataset,j=5,width=1.2)
+dataset<-add_header_row(dataset,top=TRUE,values=c("Key Metrics"),colwidths=c(5))
+dataset<-compose(dataset,part="body",i=1,j=1,value=as_paragraph("Cases"))
+dataset<-compose(dataset,part="body",i=2,j=1,value=as_paragraph("Hospital Admissions"))
+dataset<-compose(dataset,part="body",i=3,j=1,value=as_paragraph("Deaths"))
+dataset<-compose(dataset,part="body",i=4,j=1,value=as_paragraph("Test Positivity"))
+dataset<-compose(dataset,part="header",i=2,j=2,value=as_paragraph("Total to date"))
+dataset<-compose(dataset,part="header",i=2,j=3,value=as_paragraph("Most recent day"))
+dataset<-compose(dataset,part="header",i=2,j=4,value=as_paragraph("7-day daily average"))
+dataset<-compose(dataset,part="header",i=2,j=5,value=as_paragraph("Week-on-week change"))
+dataset<-color(dataset,color="#000036",i=1,part="header")
+dataset<-color(dataset,color="white",i=2,part="header")
+dataset<-color(dataset,color="#041690",part="body")
+dataset<-align(dataset,align="center",part="header")
+dataset<-align(dataset,align="center",part="body")
+dataset<-bold(dataset,j=1,part="body")
+dataset<-bold(dataset,part="header")
+dataset<-fontsize(dataset,size=32,i=1,part="header")
+dataset<-fontsize(dataset,size=17,i=2,part="header")
+dataset<-fontsize(dataset,size=16,j=1,part="body")
+dataset<-fontsize(dataset,size=17,j=2:5,part="body")
+dataset<-font(dataset,font="Georgia",part="body")
+dataset<-font(dataset,font="Georgia",part="header")
+dataset<-border_remove(dataset)
+dataset<-bg(dataset,i=2,j=2:5,bg="#000036",part="header")
+dataset<-bg(dataset,j=2:4,bg="#F5F5F5",part="body")
+dataset<-hline(dataset,i=2,j=2:5,border=std_border,part="header")
+dataset<-vline(dataset,i=2,j=2:5,border=std_border,part="header")
+dataset<-hline(dataset,j=2:5,border=std_border,part="body")
+dataset<-vline(dataset,j=2:5,border=std_border,part="body")
+dataset<-bg(dataset,~change>=0,~change,bg="#8fd400",part="body")
+dataset<-bg(dataset,~change<0,~change,bg="#F08000",part="body")
+return (dataset)
+}    
+#get metrics table
+table_bind <- bind_cols(case_juris_tbl |> 
+                           filter(cases_date ==max(cases_date)),
+                      death_juris_tbl |>  
+                         filter(deaths_date == max(deaths_date)),
+                    hosp_juris_tbl|> filter(hosp_date ==max(hosp_date)), 
+                        lab_juris_tbl|> filter(testpos_date ==max(testpos_date)))
+table_bind |>  
+  mutate(cases_cum=cases_cum|>format(justify = "right",big.mark   =","),
+         cases_new=cases_new|>format(justify = "right",big.mark   =","),
+         cases_avg=cases_avg|>format(justify = "right",big.mark   =","),
+         hosp_new=hosp_new|>format(justify = "right",big.mark   =","),
+         hosp_cum=hosp_cum|>format(justify = "right",big.mark   =","),
+         hosp_avg=hosp_avg|>format(justify = "right",big.mark   =","),
+         deaths_cum=deaths_cum|>format(justify = "right",big.mark   = ","),
+         deaths_avg=deaths_avg|>format(justify = "right",big.mark   = ","),
+         deaths_new=deaths_new|>format(justify = "right",big.mark   = ","))|>
+   select(ends_with(c("date","new","cum",'avg',"change"))) |>
+  create_summary_table() |> 
+ select(indicator,
+       cum, 
+      new,
+     avg,
+    change)|>slice(-c(4))|>flextable()|>metrics_format_function()
+
+```
