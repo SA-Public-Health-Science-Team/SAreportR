@@ -1,0 +1,258 @@
+---
+format: html
+---
+
+```{r}
+library(DiagrammeR)
+
+```
+
+```{r}
+# Not run: 
+# note the whitespace is not important
+DiagrammeR("
+  graph LR
+    A-->B
+    A-->C
+    C-->E
+    B-->D
+    C-->D
+    D-->F
+    E-->F
+")
+
+
+```
+
+```{r}
+DiagrammeR("
+   graph TB
+   A-->B
+   A-->C
+   C-->E
+   B-->D
+   C-->D
+   D-->F
+   E-->F
+")
+
+```
+
+```{r}
+DiagrammeR("
+    graph LR
+    A(Rounded)-->B[Squared]
+    B-->C{A Decision}
+    C-->D[Square One]
+    C-->E[Square Two]
+    style A fill:#E5E25F
+    style B fill:#87AB51
+    style C fill:#3C8937
+    style D fill:#23772C
+    style E fill:#B6E6E6"
+)
+
+
+
+```
+```{r}
+# Load in the 'mtcars' dataset
+data(mtcars)
+connections <- sapply(
+ 1:ncol(mtcars)
+  ,function(i) {
+     paste0(
+        i
+      ,"(",colnames(mtcars)[i],")---"
+      ,i,"-stats("
+      ,paste0(
+        names(summary(mtcars[,i]))
+        ,": "
+        ,unname(summary(mtcars[,i]))
+        ,collapse="<br/>"
+      )
+      ,")"
+   )
+ }
+)
+```
+
+```{r}
+grViz("
+digraph dot {
+
+graph [layout = dot]
+
+node [shape = circle,
+      style = filled,
+      color = grey,
+      label = '']
+
+node [fillcolor = red]
+a
+
+node [fillcolor = green]
+b c d
+
+node [fillcolor = orange]
+
+edge [color = grey]
+a -> {b c d}
+b -> {e f g h i j}
+c -> {k l m n o p}
+d -> {q r s t u v}
+}")
+```
+```{r}
+mermaid("
+sequenceDiagram
+  EDAV->>ticket seller: ask ticket
+  ticket seller->>database: seats
+  alt tickets available
+    database->>ticket seller: ok
+    ticket seller->>customer: confirm
+    customer->>ticket seller: ok
+    ticket seller->>database: book a seat
+    ticket seller->>printer: print ticket
+  else sold out
+    database->>ticket seller: none left
+    ticket seller->>customer: sorry
+  end
+")
+```
+
+```{r}
+DiagrammeR::grViz("               # All instructions are within a large character string
+digraph surveillance_diagram {    # 'digraph' means 'directional graph', then the graph name 
+  
+  # graph statement
+  #################
+  graph [layout = dot,
+         rankdir = TB,            # layout top-to-bottom
+         fontsize = 10]
+  
+
+  # nodes (circles)
+  #################
+  node [shape = circle,           # shape = circle
+       fixedsize = true
+       width = 1.3]                      
+  
+  Primary   [label = 'Primary\nFacility'] 
+  Secondary [label = 'Secondary\nFacility'] 
+  Tertiary  [label = 'Tertiary\nFacility'] 
+  SC        [label = 'Surveillance\nCoordination',
+             fontcolor = darkgreen] 
+  
+  # edges
+  #######
+  Primary   -> Secondary [label = ' case transfer',
+                          fontcolor = red,
+                          color = red]
+  Secondary -> Tertiary [label = ' case transfer',
+                          fontcolor = red,
+                          color = red]
+  
+  # grouped edge
+  {Primary Secondary Tertiary} -> SC [label = 'case reporting',
+                                      fontcolor = darkgreen,
+                                      color = darkgreen,
+                                      style = dashed]
+}
+")
+```
+```{r}
+DiagrammeR::grViz("digraph {
+graph [layout = dot, rankdir = LR]
+
+subgraph group_1{
+
+# define the global styles of the nodes. We can override these in box if we wish
+node [shape = rectangle, style = filled, fillcolor = Linen]
+
+data1 [label = 'EDAV', shape = cylinder, fillcolor = Grey]
+data2 [label = 'Dataset 2', shape = folder, fillcolor = Beige]
+process [label =  'Process \n Data', shape = cylinder]
+statistical [label = 'Statistical \n Analysis', shape = diamond]
+results [label= 'Results']
+
+# edge definitions with the node IDs
+{data1 data2 results}  -> process -> statistical -> results
+
+Primary   -> Secondary [label = ' case transfer',
+                          fontcolor = red,
+                          color = red]
+} 
+
+}")
+```
+
+```{r}
+
+DiagrammeR::grViz("digraph {
+
+graph [layout = dot, rankdir = LR]
+
+# define the global styles of the nodes. We can override these in box if we wish
+node [shape = rectangle, style = filled, fillcolor = Linen]
+
+EDAV [label = 'EDAV', shape = cylinder, fillcolor = Grey]
+Grasp [label = 'Grasp SQL \n Server', shape = cylinder, fillcolor = Grey]
+External [label = 'External \n Source', shape = cylinder, fillcolor = Grey]
+Process [label =  'Process \n Data', shape = polygon, fillcolor = Linen]
+Data [label = 'Data Repository', shape = parallelogram, fillcolor = Beige]
+Archive [label = 'Report \n Archive', shape = folder, fillcolor = Beige]
+
+Template [label = 'Templates', shape = memo, fillcolor = Beige]
+Dashboard [label = 'Shiny \n Dashboard', shape = tab, fillcolor = Beige]
+Email [label = 'Email', shape = signature]
+
+# edge definitions with the node IDs
+{EDAV Grasp External}  -> Process -> Data -> {Template Dashboard}
+Template -> Archive -> Dashboard
+Template -> Email
+}")
+```
+```{r}
+
+DiagrammeR::grViz("digraph {
+
+graph [layout = dot, rankdir = LR]
+
+# define the global styles of the nodes. We can override these in box if we wish
+node [shape = rectangle, style = filled, fillcolor = Linen]
+
+EDAV [label = 'EDAV', shape = cylinder, fillcolor = Grey]
+Grasp [label = 'Grasp SQL \n Server', shape = cylinder, fillcolor = Grey]
+External [label = 'External \n Source', shape = cylinder, fillcolor = Grey]
+Process [label =  'Process \n Data', shape = polygon, fillcolor = Linen]
+Archive [label = 'Report \n Archive', shape = folder, fillcolor = Beige]
+
+Template [label = 'Templates', shape = memo, fillcolor = Beige]
+Dashboard [label = 'Shiny \n Dashboard', shape = tab, fillcolor = Beige]
+Email [label = 'Email', shape = signature, fillcolor = White]
+
+# edge definitions with the node IDs
+{Grasp External}  -> Process 
+EDAV -> Process  
+Process -> EDAV [label = 'Store Data',
+                          fontcolor = blue,
+                          color = black]
+EDAV -> {Template Dashboard}
+Template -> Archive -> Dashboard
+Template -> Email
+
+}")
+```
+```
+
+
+```{r}
+DiagrammeR::grViz("digraph {
+  LargeBottom [shape=polygon sides=4 distortion=-.5]
+  LargeTop    [shape=polygon sides=4 distortion=.5]
+   SkewLeft  [shape=polygon sides=4 skew=-.5]
+  SkewRight [shape=polygon sides=4 skew=.5]}"
+)
+```
+
