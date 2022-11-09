@@ -1,19 +1,16 @@
 ---
 title: |
    State of the Pandemic
-subtitle: " "
-   
+subtitle:  " " 
 editor: visual
 execute:
   echo: false
   warning: false
   message: false
-format: 
-  html:
-    toc: true
+format: html
 params:
   refreshData: true
-  timeframe: Weekly
+  timeframe: Monthly
   username: thq5
 ---
 
@@ -68,79 +65,9 @@ options(scipen = 100)
 #set plot format
 theme_set(theme_ben())
 
-#read yaml file
-#line<-read_lines("C:/Users/thq5/OneDrive - CDC/SAreportR/quartotest/_quarto.yml")
-#line<-str_replace_all(line,"NE","AL")
-#get params from yaml file
-#params=data.frame(i1="1",i2="2")
-#for (i in line){
- #   i=str_replace_all(i," ","")
-  #  i1=sapply(strsplit(i,":"),'[',1)
-   # i2=sapply(strsplit(i,":"),'[',2)
-#    params1=data.frame(i1=i1,i2=i2)
- #   params2=rbind(params,params1)
-  #  params=params2
-#}
-#get params from yaml file
-#params<-params%>%na.omit()%>%pivot_wider(names_from=i1,values_from=i2)
-#modify params
-#params$timeframe="Daily"
-
 ```
 
 ```{r warning=FALSE, message=FALSE, echo=FALSE}
-#population data for each jurisdiction
-pop <-  readr::read_rds(here::here("data/pop.rds"))
-#US population data
-us_pop <- 331996199
-#get case/death data
-raw<-   readr::read_csv(paste0(
-        "C:/Users/",
-        params$username,
-        "/CDC/Situational Awareness COVID-19 Response - WORKING FOLDER/DOMESTIC CASE COUNTS/US CASE COUNTS SPREADSHEET/CDC Final US Case Counts/final_counts_dataset_weekly.csv"),
-        guess_max = 3000,
-        show_col_types = FALSE)  
-
-#get case/death data join with population data
-raw_juris<-raw%>%rename(juris=state_abbr)%>%
-    mutate(juris := case_when(
-           juris == "MP" ~ "CNMI",
-           juris == "VI" ~ "USVI",
-           juris == "MH" ~ "RMI",
-            TRUE ~ juris)) %>%left_join(pop)%>%select(-fema_region)%>%
-    select(-juris_name)%>%rename(Region=fema_region_number)
-#get regional sum of case/death data
-raw_region<-raw%>%rename(juris=state_abbr)%>%
-    mutate(juris := case_when(
-           juris == "MP" ~ "CNMI",
-           juris == "VI" ~ "USVI",
-           juris == "MH" ~ "RMI",
-            TRUE ~ juris)) %>%left_join(pop)%>%#select(-fema_region)%>%
-    select(-juris_name)%>%rename(Region=fema_region_number)%>%
-    group_by(submission_date,Region)%>%
-    mutate(state_name=fema_region,juris=fema_region,regiontotalcase=sum(tot_cases),regionconfirmcases=sum(confirmed_cases),regionprocases=sum(prob_cases),regionnewcase=sum(New_case),regionconfirmcase=sum(new_confirmed_cases),regionpnewcase=sum(pnew_case),regiontotaldeath=sum(tot_death),regionconfirmdeath=sum(confirmed_deaths),regionprodeath=sum(prob_death),regionnewdeath=sum(new_death),regionnewconfirmdeath=sum(new_confirmed_deaths),regionpnewdeath=sum(pnew_death),regionhisnewprobdeath=sum(historical_new_prob_deaths),regionhisnewtotaldeath=sum(historical_new_total_deaths),regionhisnewprobcase=sum(historical_new_prob_cases),regionhisnewtotalcase=sum(historical_new_total_cases),regionpop=sum(pop))%>%
-    select(state_name,juris,submission_date,regiontotalcase,regionconfirmcases,regionprocases,regionnewcase,regionconfirmcase,regionpnewcase,regiontotaldeath,regionconfirmdeath,regionprodeath,regionnewdeath,regionnewconfirmdeath,regionpnewdeath,regionhisnewprobdeath,regionhisnewtotaldeath,regionhisnewprobcase,regionhisnewtotalcase,regionpop,Region)%>%unique()%>%
-    rename(tot_cases=regiontotalcase,confirmed_cases=regionconfirmcases,prob_cases=regionprocases,New_case=regionnewcase,new_confirmed_cases=regionconfirmcase,pnew_case=regionpnewcase,tot_death=regiontotaldeath,confirmed_deaths=regionconfirmdeath,prob_death=regionprodeath,new_death=regionnewdeath,new_confirmed_deaths=regionnewconfirmdeath,pnew_death=regionpnewdeath,historical_new_prob_deaths=regionhisnewprobdeath,historical_new_total_deaths=regionhisnewtotaldeath,historical_new_prob_cases=regionhisnewprobcase,historical_new_total_cases=regionhisnewtotalcase,pop=regionpop)
-#get total US case/death sum data
-raw_us<-raw%>%rename(juris=state_abbr)%>%
-    mutate(juris := case_when(
-           juris == "MP" ~ "CNMI",
-           juris == "VI" ~ "USVI",
-           juris == "MH" ~ "RMI",
-            TRUE ~ juris)) %>%left_join(pop)%>%group_by(submission_date)%>%
-    mutate(state_name="The United States",juris="US",ustotalcase=sum(tot_cases),usconfirmcases=sum(confirmed_cases),usprocases=sum(prob_cases),usnewcase=sum(New_case),usconfirmcase=sum(new_confirmed_cases),uspnewcase=sum(pnew_case),ustotaldeath=sum(tot_death),usconfirmdeath=sum(confirmed_deaths),usprodeath=sum(prob_death),usnewdeath=sum(new_death),usnewconfirmdeath=sum(new_confirmed_deaths),uspnewdeath=sum(pnew_death),ushisnewprobdeath=sum(historical_new_prob_deaths),ushisnewtotaldeath=sum(historical_new_total_deaths),ushisnewprobcase=sum(historical_new_prob_cases),ushisnewtotalcase=sum(historical_new_total_cases),pop=us_pop,Region="NA")%>%
-    select(state_name,juris,submission_date,ustotalcase,usconfirmcases,usprocases,usnewcase,usconfirmcase,uspnewcase,ustotaldeath,usconfirmdeath,usprodeath,usnewdeath,usnewconfirmdeath,uspnewdeath,ushisnewprobdeath,ushisnewtotaldeath,ushisnewprobcase,ushisnewtotalcase,pop,Region)%>%unique()%>%
-    rename(tot_cases=ustotalcase,confirmed_cases=usconfirmcases,prob_cases=usprocases,New_case=usnewcase,new_confirmed_cases=usconfirmcase,pnew_case=uspnewcase,tot_death=ustotaldeath,confirmed_deaths=usconfirmdeath,prob_death=usprodeath,new_death=usnewdeath,new_confirmed_deaths=usnewconfirmdeath,pnew_death=uspnewdeath,historical_new_prob_deaths=ushisnewprobdeath,historical_new_total_deaths=ushisnewtotaldeath,historical_new_prob_cases=ushisnewprobcase,historical_new_total_cases=ushisnewtotalcase)
-
-#get combined data
-combined_data<-raw_juris%>%rbind(raw_region)%>%rbind(raw_us)
-#filter by region
-region1_data<-combined_data%>%filter(juris=="Region 1")
-#filter by juris
-CA<-combined_data%>%filter(juris=="CA")
-#filter US
-US<-combined_data%>%filter(juris=="US")
-
 case_nat_tbl  <- get_case_death_nat_tbl(username = params$username) |> select(!contains("deaths"))
 
 #case_nat_tbl  <- US |> select(!contains("deaths"))
@@ -641,7 +568,7 @@ vax_trends_tbl
 
 Data as of `r vax_date`, 06:00 ET \| Sources: Data Monitoring and Reporting Section, Vaccine Task Force; CDC COVID Tracker
 
-```{r}
+```{r Case,warning=FALSE, message=FALSE, echo=FALSE}
 
 cases_date_raw<-case_nat_tbl%>%filter(cases_date==max(cases_date,na.rm=TRUE))%>%pull(cases_date)
 cases_date_peak<-format(cases_date_raw, format="%Y-%m-%d")
@@ -659,7 +586,7 @@ pivot_longer( cols = everything(),
                values_transform = list(val = as.character))%>%
 select(val)%>%flextable()
 #format case title table
-casetitle<-title_table_format(casetitle)                                   
+casetitle<-title_format_exsum(casetitle)                                   
 
 cases_epicurve<-case_nat_tbl%>%
     mutate(cases_prior_avg= lag(cases_avg,order_by = cases_date,1)%>% round(0))
@@ -756,7 +683,7 @@ pivot_longer( cols = everything(),
                 values_to = "val", 
                values_transform = list(val = as.character))%>%
 select(val)%>%flextable()
-hosptitle<-title_table_format(hosptitle) 
+hosptitle<-title_format_exsum(hosptitle) 
 #get hospital data
 hosp_epicurve <- hosp_nat_tbl %>%select(-hosp_cum)%>% filter(hosp_date<=max(hosp_date,na.rm=TRUE)) %>% mutate(
     hosp_cum=sum(hosp_new),
@@ -905,7 +832,7 @@ pivot_longer( cols = everything(),
                values_transform = list(val = as.character))%>%
 select(val)%>%flextable()
 #format death title table
-deathtitle<-title_table_format(deathtitle)                                   
+deathtitle<-title_format_exsum(deathtitle)                                   
 
 deaths_epicurve<-death_nat_tbl%>%
     mutate(deaths_prior_avg= lag(deaths_avg,order_by = deaths_date,1)%>% round(0))
@@ -998,13 +925,13 @@ deathplot
 lab_Bdate<-format(Sys.Date()-3,format="%B %d, %Y")
 lab_date_raw<-Sys.Date()-3
 lab_date<-format(lab_date_raw,format="%b %d, %Y")
-labtitle<-data.frame(title="Daily SARS-CoV-2 NAAT Percent Test Positivity and Test Volume, United States",subtitle=glue("March 01, 2020 - {lab_Bdate}"))%>%
+labtitle<-data.frame(title=glue("{params$timeframe} SARS-CoV-2 NAAT Percent Test Positivity and Test Volume, United States"),subtitle=glue("March 01, 2020 - {lab_Bdate}"))%>%
 pivot_longer( cols = everything(),
                  names_to = "names",
                 values_to = "val", 
                values_transform = list(val = as.character))%>%
 select(val)%>%flextable()
-labtitle<-title_table_format(labtitle) 
+labtitle<-title_format_exsum(labtitle) 
 
 #get lab data
 lab_epicurve <- lab_nat_tbl %>% 
