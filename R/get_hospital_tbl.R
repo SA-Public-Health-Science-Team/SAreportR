@@ -12,10 +12,10 @@
 #'
 #' @examples
 get_hosp_juris_tbl <- function(username,
-                                date_column = "collection_date",
-                                state_abbr  = 'state',
-                                lag         = 2,
-                                start_date  = "2020-01-01"){
+                               date_column = "collection_date",
+                               state_abbr  = 'state',
+                               lag         = 2,
+                               start_date  = "2020-01-01"){
 
     pop <- readr::read_rds(here::here("data/pop.rds"))
 

@@ -14,7 +14,7 @@ format:
 params:
   refreshData: true
   timeframe: Weekly
-  username: thq5
+  username: ovt1
 ---
 
 ```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
@@ -297,14 +297,14 @@ Centers for Disease Control and Prevention
 # get number of jurisdictions reporting
 get_reporting_count <- function(number) {
  number_no_new_counts <-  cases_raw %>% 
-                            select(state_name,
-                                   state_abbr,
-                                   submission_date,
-                                   tot_cases,
-                                   New_case,
-                                   tot_death,
-                                   new_death) %>% 
-                      filter(submission_date == max(submission_date) & new_death == 0 & New_case == 0) %>% 
+     select(state_name,
+           state_abbr,
+           submission_date,
+           tot_cases,
+           New_case,
+           tot_death,
+           new_death) %>% 
+     filter(submission_date == max(submission_date) & new_death == 0 & New_case == 0) %>% 
                       nrow()
  
  return(60 - number_no_new_counts + number)

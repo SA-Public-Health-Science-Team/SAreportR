@@ -248,11 +248,40 @@ Template -> Email
 
 
 ```{r}
+
+
+```
+
+```{r}
+
+
 DiagrammeR::grViz("digraph {
-  LargeBottom [shape=polygon sides=4 distortion=-.5]
-  LargeTop    [shape=polygon sides=4 distortion=.5]
-   SkewLeft  [shape=polygon sides=4 skew=-.5]
-  SkewRight [shape=polygon sides=4 skew=.5]}"
-)
+
+graph [layout = dot, rankdir = LR]
+
+# define the global styles of the nodes. We can override these in box if we wish
+node [shape = rectangle, style = filled, fillcolor = Linen]
+
+EDAV [label = 'EDAV', shape = cylinder, fillcolor = Grey]
+Grasp [label = 'Grasp SQL \n Server', shape = cylinder, fillcolor = Grey]
+External [label = 'External \n Source', shape = cylinder, fillcolor = Grey]
+Process [label =  'Process \n Data', shape = polygon, fillcolor = Linen]
+Archive [label = 'Report \n Archive', shape = folder, fillcolor = Beige]
+
+Template [label = 'Templates', shape = memo, fillcolor = Beige]
+Dashboard [label = 'Shiny \n Dashboard', shape = tab, fillcolor = Beige]
+Email [label = 'Email', shape = signature, fillcolor = White]
+
+# edge definitions with the node IDs
+{Grasp External}  -> Process 
+EDAV -> Process  
+Process -> EDAV [label = 'Store Data',
+                          fontcolor = blue,
+                          color = black]
+EDAV -> {Template Dashboard}
+Template -> Archive -> Dashboard
+Template -> Email
+
+}")
 ```
 

@@ -16,7 +16,7 @@ plot_epi_curve <- function(data_tbl, timeframe, color){
         select(1) |>
         colnames()
 
-    new_col <-  data_tbl |>
+    new_col  <-  data_tbl |>
         select(contains("new")) |>
         select(1) |>
         colnames()

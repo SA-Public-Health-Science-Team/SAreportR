@@ -11,7 +11,7 @@ params:
     sop: false
     username: 'ovt1'
     region: 4
-    refreshData: true 
+    refreshData: false 
     timeframe: "Daily"
 
 execute: 

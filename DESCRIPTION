@@ -2,15 +2,15 @@ Package: SAreportR
 Title: An app that enables the automatic generation of several response-related documents in various output formats
 Version: 0.0.0.9000
 Authors@R:c( 
-    person("Sorie", "Dumbuya", ,"ovt1@cdc.gov", role = c("aut", "cre")),
-    person("Jie", "Feng", ,"thq5@cdc.gov", role = c("aut", "cre")),
-    person("Meeyoung", "Park", ,"gpd2@cdc.gov", role = c("cre")),
-    person("Jacqueline", "Burkholder", ,"jib0@cdc.gov", role = c("cre")),
-    person("Jonathan", "Bui", ,"qxc5@cdc.gov", role = c("cre")),
-    person("Situational Awareness Branch, Public Health Science Team",,,"eocsaanalyst@cdc.gov", role = c("aut","cre")),
+    person("Situational Awareness Branch, Public Health Science Team",,,"eocsaanalyst@cdc.gov", role = c("aut", "cre")),
+    person("Sorie", "Dumbuya", ,"ovt1@cdc.gov", role = c("aut")),
+    person("Jie", "Feng", ,"thq5@cdc.gov", role = "aut"),
+    person("Meeyoung", "Park", ,"gpd2@cdc.gov"),
+    person("Jacqueline", "Burkholder", ,"jib0@cdc.gov"),
+    person("Jonathan", "Bui", ,"qxc5@cdc.gov"),
     person("US Centers for Disease Control and Prevention", role = c("cph", "fnd"))
            )
-Description: This package provides templates, functions, a user interface, and documentation for generating vrious COVID-19 Response reports.
+Description: This package provides templates, functions, a user interface, and documentation for generating various COVID-19 Response reports.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

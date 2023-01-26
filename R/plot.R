@@ -140,7 +140,7 @@ monthly_plot_exsum<-function(dataset,indicator,color){
         #set color of column
         scale_fill_manual(" ",values=color)+
         #set the maximal value of y axis and set the secondary y axis
-        scale_y_continuous(limits=c(0,max(dataset$cummonth)*1.3),labels = label_number(big.mark = ","))+
+        scale_y_continuous(limits=c(0,max(dataset$cummonth)*1.3),labels = label_number(big.mark = ",")) +
         #set axis title
         labs(x="Month of Report",y=glue("Monthly New {indicator}"))+
         #set theme
